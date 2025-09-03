@@ -1,26 +1,14 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Heart,
   TrendingUp,
-  Users,
   Play,
-  Crown,
-  LogOut,
-  Sparkles,
-  User,
   Menu,
   Moon,
-  Plus,
   BarChart3,
   Search,
-  ExternalLink,
-  ArrowLeft,
-  MessageCircle,
-  UserPlus,
-  DollarSign,
 } from "lucide-react";
 import SLogo from "@/components/s-logo";
 import {
@@ -34,30 +22,34 @@ import {
 import { useAuth } from "@/hooks/useAuthRTK";
 import ArtistProfilePage from "@/components/artist-profile-page";
 import InvestmentModal from "@/components/investment-modal";
+import { useGetFeaturedArtistsQuery, useLikeDislikeArtistMutation, type FeaturedArtist } from "@/store/features/api/fanApi";
+import type { Artist } from "@/types/artist";
 
-interface Artist {
-  id: number;
-  name: string;
-  genre: string;
-  country: string;
-  description: string;
-  monthlyListeners: number;
-  fundingGoal: string;
-  currentFunding: string;
-  expectedReturn: string;
-  riskLevel: string;
-  streamingLinks: {
-    spotify?: string;
-    apple?: string;
-    youtube?: string;
-    instagram?: string;
-    tiktok?: string;
-    soundcloud?: string;
+// Helper function to transform API artist to UI artist
+const transformApiArtistToUIArtist = (apiArtist: FeaturedArtist, index: number): Artist => {
+  return {
+    id: index + 1,
+    name: apiArtist.username || 'Unknown Artist',
+    genre: apiArtist.favoriteGenre || 'Unknown Genre',
+    country: 'Unknown', // Not provided by API, using dummy data
+    description: apiArtist.artistBio || 'No description available',
+    monthlyListeners: Math.floor(Math.random() * 5000000) + 100000, // Dummy data
+    fundingGoal: apiArtist.fundingGoal,
+    currentFunding: apiArtist.currentFunding,
+    expectedReturn: apiArtist.expectedReturn,
+    // riskLevel: ['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)], // Dummy data
+    streamingLinks: {
+      spotify: apiArtist.socialMediaLinks?.spotify,
+      youtube: apiArtist.socialMediaLinks?.youtube,
+      instagram: apiArtist.socialMediaLinks?.instagram,
+    },
+    imageUrl: apiArtist.profileImage || `https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=600&fit=crop&sig=${index}`, // Dummy data with index for variety
+    isActive: true,
+    createdAt: new Date(),
+    isLiked: apiArtist.isLiked,
+    artistId: apiArtist._id || '',
   };
-  imageUrl: string;
-  isActive: boolean;
-  createdAt: Date;
-}
+};
 
 export default function UserHome() {
   const { user, logout, isLogoutLoading } = useAuth();
@@ -65,100 +57,22 @@ export default function UserHome() {
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
 
-  // Mock featured artists data (replacing useQuery API call)
-  const featuredArtists: Artist[] = [
-    {
-      id: 1,
-      name: "Rosé",
-      genre: "K-Pop",
-      country: "South Korea",
-      description: "K-Pop sensation with millions of followers worldwide. Known for powerful vocals and innovative music videos.",
-      monthlyListeners: 5200000,
-      fundingGoal: "150000",
-      currentFunding: "110000",
-      expectedReturn: "20-30%",
-      riskLevel: "Low",
-      streamingLinks: {
-        spotify: "https://open.spotify.com/artist/3eVa5w3URK5duf6eyVDbu9",
-        apple: "https://music.apple.com/artist/rose/1553054647",
-        youtube: "https://www.youtube.com/@roses_are_rosie",
-        instagram: "https://www.instagram.com/roses_are_rosie/",
-        tiktok: "https://www.tiktok.com/@roses_are_rosie"
-      },
-      imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=600&fit=crop",
-      isActive: true,
-      createdAt: new Date()
-    },
-    {
-      id: 2,
-      name: "Léo",
-      genre: "Rap",
-      country: "France",
-      description: "French rap artist rising in the European music scene. Known for lyrical depth and social commentary.",
-      monthlyListeners: 2400000,
-      fundingGoal: "100000",
-      currentFunding: "89000",
-      expectedReturn: "25-35%",
-      riskLevel: "Medium",
-      streamingLinks: {
-        spotify: "https://open.spotify.com/search/L%C3%A9o%20rap%20paris",
-        apple: "https://music.apple.com/search?term=leo+rap+french",
-        youtube: "https://www.youtube.com/results?search_query=leo+rap+francais",
-        instagram: "https://www.instagram.com/explore/tags/leorap/",
-        soundcloud: "https://soundcloud.com/search?q=leo%20rap%20paris"
-      },
-      imageUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&h=600&fit=crop",
-      isActive: true,
-      createdAt: new Date()
-    },
-    {
-      id: 3,
-      name: "Amara",
-      genre: "Afrobeats",
-      country: "Nigeria",
-      description: "Afrobeats sensation from Lagos bringing African sounds to global audiences. Rising star with incredible potential.",
-      monthlyListeners: 1800000,
-      fundingGoal: "100000",
-      currentFunding: "45000",
-      expectedReturn: "30-40%",
-      riskLevel: "High",
-      streamingLinks: {
-        spotify: "https://open.spotify.com/search/amara%20afrobeats",
-        apple: "https://music.apple.com/search?term=amara+afrobeats",
-        youtube: "https://www.youtube.com/results?search_query=amara+afrobeats+lagos",
-        instagram: "https://www.instagram.com/explore/tags/amaraafrobeats/",
-        tiktok: "https://www.tiktok.com/search?q=amara%20afrobeats"
-      },
-      imageUrl: "https://images.unsplash.com/photo-1516575080321-4a8d13461c2e?w=800&h=600&fit=crop",
-      isActive: true,
-      createdAt: new Date()
-    },
-    {
-      id: 4,
-      name: "Maya Chen",
-      genre: "Electronic",
-      country: "Singapore",
-      description: "Electronic music producer creating ambient soundscapes. Rising star in the Asian electronic scene.",
-      monthlyListeners: 1200000,
-      fundingGoal: "75000",
-      currentFunding: "32000",
-      expectedReturn: "15-25%",
-      riskLevel: "Medium",
-      streamingLinks: {
-        spotify: "https://open.spotify.com/search/maya%20chen%20electronic",
-        apple: "https://music.apple.com/search?term=maya+chen+electronic",
-        youtube: "https://www.youtube.com/results?search_query=maya+chen+electronic",
-        instagram: "https://www.instagram.com/explore/tags/mayachenmusic/",
-        soundcloud: "https://soundcloud.com/search?q=maya%20chen%20singapore"
-      },
-      imageUrl: "https://images.unsplash.com/photo-1516575080321-4a8d13461c2e?w=800&h=600&fit=crop",
-      isActive: true,
-      createdAt: new Date()
-    }
-  ];
+  // Fetch featured artists from API
+  const { 
+    data: featuredArtistsResponse, 
+    isLoading, 
+    error 
+  } = useGetFeaturedArtistsQuery({ page: 1, limit: 10 });
 
-  // Mock loading state (keeping original behavior)
-  const isLoading = false;
+  // Like/Dislike artist mutation
+  const [likeDislikeArtist, { isLoading: isLikeDislikeLoading }] = useLikeDislikeArtistMutation();
+
+  // Transform API data to UI format
+  const featuredArtists: Artist[] = featuredArtistsResponse?.data 
+    ? featuredArtistsResponse.data.map((apiArtist, index) => 
+        transformApiArtistToUIArtist(apiArtist, index)
+      )
+    : [];
 
   const handleArtistClick = (artist: Artist) => {
     setSelectedArtist(artist);
@@ -176,9 +90,18 @@ export default function UserHome() {
     setShowInvestmentModal(false);
   };
 
-  const handleFollowArtist = (artist: Artist) => {
-    // TODO: Implement follow functionality
-    console.log("Following artist:", artist.name);
+  const handleFollowArtist = async (artist: Artist) => {
+    if (!artist.artistId) {
+      console.error("Artist ID is missing");
+      return;
+    }
+    
+    try {
+      await likeDislikeArtist({ artistId: artist.artistId }).unwrap();
+      console.log("Artist like/dislike toggled successfully");
+    } catch (error) {
+      console.error("Error toggling artist like:", error);
+    }
   };
 
   const handleMessageArtist = (artist: Artist) => {
@@ -257,7 +180,22 @@ export default function UserHome() {
 
             {/* Featured Artist Cards */}
             <div className="space-y-4">
-              {featuredArtists.map((artist, index) => {
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-400">Loading featured artists...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <p className="text-red-400 mb-4">Failed to load featured artists</p>
+                  <p className="text-gray-500 text-sm">Please try again later</p>
+                </div>
+              ) : featuredArtists.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-400">No featured artists available</p>
+                </div>
+              ) : (
+                featuredArtists.map((artist, index) => {
                 const fundingProgress = Math.round(
                   (parseFloat(artist.currentFunding) /
                     parseFloat(artist.fundingGoal)) *
@@ -295,13 +233,20 @@ export default function UserHome() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-gray-600 hover:bg-gray-700"
+                              className={`border-gray-600 hover:bg-gray-700 ${
+                                artist.isLiked ? 'text-red-500 border-red-500' : 'text-gray-400'
+                              }`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleFollowArtist(artist);
                               }}
+                              disabled={isLikeDislikeLoading}
                             >
-                              <Heart className="w-4 h-4" />
+                              <Heart 
+                                className={`w-4 h-4 ${
+                                  artist.isLiked ? 'fill-current' : ''
+                                }`} 
+                              />
                             </Button>
                             <Button
                               size="sm"
@@ -471,7 +416,8 @@ export default function UserHome() {
                     </CardContent>
                   </Card>
                 );
-              })}
+                })
+              )}
             </div>
           </>
         ) : activeTab === "dashboard" ? (

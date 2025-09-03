@@ -11,21 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { ContentUploadModal } from "./content-upload-modal";
 import { useGetContentQuery } from "@/store/features/api/authApi";
-
-interface Artist {
-  id: number;
-  name: string;
-  genre: string;
-  country: string;
-  description: string;
-  monthlyListeners: number;
-  fundingGoal: string;
-  currentFunding: string;
-  expectedReturn: string;
-  riskLevel: string;
-  imageUrl: string;
-  streamingLinks?: any;
-}
+import type { Artist } from "@/types/artist";
 
 interface ArtistProfilePageProps {
   artist: Artist;
