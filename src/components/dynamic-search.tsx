@@ -1,0 +1,685 @@
+import { useState, useEffect, useMemo } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  Search,
+  Filter,
+  ArrowLeft,
+  Play,
+  Volume2,
+  Heart,
+  Share,
+  MoreVertical,
+  TrendingUp,
+  Users,
+  Zap,
+  Flame,
+  Clock,
+} from "lucide-react";
+import SparkLogo from "@/components/spark-logo";
+import SLogo from "@/components/s-logo";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/useAuthRTK";
+import ConnectionStatus from "@/components/ConnectionStatus";
+import ArtistsGrid from "@/components/artists-grid";
+
+interface ThemeColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+  gradient: string;
+  overlay: string;
+  text: string;
+  textSecondary: string;
+  background: string;
+  backgroundSecondary: string;
+}
+
+interface SearchResult {
+  id: string;
+  type: "artist" | "song" | "video" | "playlist";
+  title: string;
+  artist: string;
+  thumbnail: string;
+  duration?: string;
+  views?: string;
+  genre?: string;
+  description?: string;
+  verified?: boolean;
+}
+
+interface ExtendedArtist {
+  id: number;
+  name: string;
+  genre: string;
+  country?: string;
+  monthlyListeners?: number;
+  streams?: number;
+  revenue?: number;
+  imageUrl?: string;
+  description?: string;
+}
+
+export default function DynamicSearch({
+  userRole,
+  artists: propArtists,
+}: {
+  userRole?: string;
+  artists?: ExtendedArtist[];
+}) {
+  console.log("enter here");
+  const { user } = useAuth();
+  const { t } = useLanguage();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("Top");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Mock artists data to replace useArtists and API calls
+  const mockArtists: ExtendedArtist[] = [
+    {
+      id: 1,
+      name: "Bad Bunny",
+      genre: "Reggaeton",
+      country: "Puerto Rico",
+      monthlyListeners: 75000000,
+      streams: 15420000,
+      revenue: 82450,
+      imageUrl: "https://example.com/bad-bunny.jpg",
+      description: "Global reggaeton superstar from Puerto Rico",
+    },
+    {
+      id: 2,
+      name: "The Weeknd",
+      genre: "R&B",
+      country: "Canada",
+      monthlyListeners: 68000000,
+      streams: 22350000,
+      revenue: 125600,
+      imageUrl: "https://example.com/weeknd.jpg",
+      description: "Grammy-winning R&B artist from Toronto",
+    },
+    {
+      id: 3,
+      name: "Taylor Swift",
+      genre: "Pop",
+      country: "USA",
+      monthlyListeners: 85000000,
+      streams: 31800000,
+      revenue: 189400,
+      imageUrl: "https://example.com/taylor-swift.jpg",
+      description: "Multi-Grammy winning pop superstar",
+    },
+    {
+      id: 4,
+      name: "Drake",
+      genre: "Hip Hop",
+      country: "Canada",
+      monthlyListeners: 72000000,
+      streams: 28200000,
+      revenue: 158900,
+      imageUrl: "https://example.com/drake.jpg",
+      description: "Chart-topping rapper and singer from Toronto",
+    },
+    {
+      id: 5,
+      name: "Dua Lipa",
+      genre: "Pop",
+      country: "UK",
+      monthlyListeners: 62000000,
+      streams: 18500000,
+      revenue: 95300,
+      imageUrl: "https://example.com/dua-lipa.jpg",
+      description: "British pop sensation and Grammy winner",
+    },
+    {
+      id: 6,
+      name: "Ed Sheeran",
+      genre: "Pop",
+      country: "UK",
+      monthlyListeners: 58000000,
+      streams: 24100000,
+      revenue: 142800,
+      imageUrl: "https://example.com/ed-sheeran.jpg",
+      description: "Singer-songwriter from England",
+    },
+  ];
+
+  // Use prop artists or mock data (replacing useArtists hook)
+  const artists = propArtists || mockArtists;
+
+  // Additional mock API artists (replacing useQuery API call)
+  const apiArtists: ExtendedArtist[] = [
+    {
+      id: 7,
+      name: "Billie Eilish",
+      genre: "Alternative Pop",
+      country: "USA",
+      monthlyListeners: 55000000,
+      streams: 19800000,
+      revenue: 98500,
+      imageUrl: "https://example.com/billie-eilish.jpg",
+      description: "Grammy-winning alternative pop artist",
+    },
+    {
+      id: 8,
+      name: "Post Malone",
+      genre: "Hip Hop",
+      country: "USA",
+      monthlyListeners: 64000000,
+      streams: 25600000,
+      revenue: 135700,
+      imageUrl: "https://example.com/post-malone.jpg",
+      description: "Chart-topping hip hop and pop artist",
+    },
+  ];
+
+  // Données trending statiques pour éviter l'erreur
+  const trendingNow = [
+    {
+      id: 1,
+      title: "Monaco",
+      artist: "Bad Bunny",
+      plays: "2.1M",
+      isLive: true,
+    },
+    {
+      id: 2,
+      title: "Blinding Lights",
+      artist: "The Weeknd",
+      plays: "1.8M",
+      isLive: false,
+    },
+    {
+      id: 3,
+      title: "Anti-Hero",
+      artist: "Taylor Swift",
+      plays: "3.2M",
+      isLive: false,
+    },
+    {
+      id: 4,
+      title: "God's Plan",
+      artist: "Drake",
+      plays: "2.7M",
+      isLive: false,
+    },
+  ];
+
+  // Thème d'origine avec couleurs dynamiques
+  const themeColors: ThemeColors = useMemo(() => {
+    const hue = Math.floor(Math.random() * 360);
+    const saturation = 60 + Math.random() * 20;
+    const lightness = 45 + Math.random() * 15;
+
+    return {
+      primary: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
+      secondary: `hsl(${(hue + 30) % 360}, ${saturation - 10}%, ${
+        lightness - 5
+      }%)`,
+      accent: `hsl(${(hue + 60) % 360}, ${saturation + 10}%, ${
+        lightness + 10
+      }%)`,
+      gradient: `linear-gradient(135deg, hsl(${hue}, ${saturation}%, ${lightness}%) 0%, hsl(${
+        (hue + 30) % 360
+      }, ${saturation - 10}%, ${lightness - 5}%) 100%)`,
+      overlay: `linear-gradient(to bottom, transparent 0%, hsla(${hue}, 30%, 10%, 0.8) 100%)`,
+      text: `hsl(${hue}, 10%, 95%)`,
+      textSecondary: `hsl(${hue}, 15%, 70%)`,
+      background: `hsl(${hue}, 20%, 8%)`,
+      backgroundSecondary: `hsl(${hue}, 25%, 12%)`,
+    };
+  }, []);
+
+  // Appliquer le thème
+  useEffect(() => {
+    const root = document.documentElement;
+    Object.entries(themeColors).forEach(([key, value]) =>
+      root.style.setProperty(`--search-${key}`, value)
+    );
+  }, [themeColors]);
+
+  // Mock refresh function (replacing refetchArtists)
+  const handleRefreshArtists = () => {
+    console.log("Refreshing artists (mock)");
+    // In a real app, this would trigger a re-fetch
+  };
+
+  // Générer des résultats de recherche avec données statiques - TOUS les artistes recherchables
+  const generateSearchResults = (query: string): SearchResult[] => {
+    if (!query.trim()) return [];
+    // Combiner toutes les sources d'artistes pour une recherche exhaustive (using mock data)
+    const allArtists = [...(artists || []), ...(apiArtists || [])];
+    const results: SearchResult[] = [];
+
+    allArtists
+      .filter(
+        (artist) =>
+          artist.name.toLowerCase().includes(query.toLowerCase()) ||
+          artist.genre.toLowerCase().includes(query.toLowerCase()) ||
+          (artist.country &&
+            artist.country.toLowerCase().includes(query.toLowerCase()))
+      )
+      .slice(0, 10) // Limite à 10 vrais artistes maximum
+      .forEach((artist, index) => {
+        results.push({
+          id: `real-artist-${artist.id}-${Math.random()}`,
+          type: "artist",
+          title: artist.name,
+          artist: artist.monthlyListeners
+            ? `${artist.monthlyListeners.toLocaleString()} monthly listeners`
+            : `${artist.genre} artist from ${artist.country}`,
+          thumbnail: artist.imageUrl || `/api/placeholder/300/300`,
+          genre: artist.genre,
+          description:
+            artist.description ||
+            `${artist.genre} artist from ${artist.country}`,
+          verified: false, // Pas de statut vérifié fictif
+        });
+
+        // SUPPRIMÉ: Plus de fausses vidéos/chansons - uniquement les vrais artistes
+      });
+
+    return results.slice(0, 20);
+  };
+
+  const searchResults = generateSearchResults(searchQuery);
+
+  console.log("searchResults::::", searchResults);
+
+  // Filtrer les résultats selon l'onglet actif et le rôle utilisateur
+  const filteredResults = useMemo(() => {
+    if (activeTab === "Top") return searchResults;
+    return searchResults.filter((result) => {
+      switch (activeTab) {
+        case "Artists":
+          return result.type === "artist";
+        case "Songs":
+          return result.type === "song";
+        case "Videos":
+          return result.type === "video";
+        case "Playlists":
+          return result.type === "playlist";
+        case "LIVE":
+          return result.type === "video" && Math.random() > 0.7;
+        case "Investment Ops":
+        case "Rising Stars":
+          return result.type === "artist" && userRole === "investor";
+        case "Talent Scout":
+        case "Market Data":
+          return result.type === "artist" && userRole === "label";
+        case "Collaborations":
+        case "Opportunities":
+          return result.type === "artist" && userRole === "artist";
+        default:
+          return true;
+      }
+    });
+  }, [searchResults, activeTab, userRole]);
+
+  // SUPPRIMÉ: Plus de contenu fictif trending
+
+  // Fonctions utilitaires
+  const getUserTypeLabel = () => (userRole || "User") + " Search";
+  const getRoleAction = () => (userRole === "investor" ? "Invest" : "Follow");
+
+  // Tabs basés sur le rôle utilisateur
+  const getRoleTabs = () => {
+    const baseTabs = ["Top", "Artists", "Songs"];
+    if (userRole === "investor") return [...baseTabs, "Investment Ops"];
+    if (userRole === "label") return [...baseTabs, "Talent Scout"];
+    if (userRole === "artist") return [...baseTabs, "Collaborations"];
+    return baseTabs;
+  };
+
+  return (
+    <div className="min-h-screen w-full relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 text-white">
+      {/* Gradient background */}
+      <div
+        className="absolute inset-0 opacity-10"
+        style={{
+          background: `radial-gradient(circle at 30% 20%, ${themeColors.primary} 0%, transparent 70%), radial-gradient(circle at 70% 80%, ${themeColors.secondary} 0%, transparent 70%)`,
+        }}
+      />
+
+      {/* Plus de bannière temps réel */}
+
+      {/* Header with search */}
+      <div className="relative z-10 p-4 flex items-center space-x-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="hover:bg-cyan-500/20 text-white"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Input
+            placeholder="Search artists, songs, videos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
+            className={`pl-12 pr-12 h-12 text-lg rounded-full border-2 transition-all duration-300 bg-slate-900/50 ${
+              isSearchFocused ? "border-cyan-500" : "border-transparent"
+            } text-white ${
+              isSearchFocused ? "shadow-lg shadow-cyan-500/20" : ""
+            }`}
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:bg-cyan-500/20 text-white"
+            >
+              ✕
+            </Button>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="hover:bg-white/10"
+          style={{ color: themeColors.text }}
+        >
+          <MoreVertical className="w-5 h-5" />
+        </Button>
+      </div>
+
+      {/* User type badge */}
+      <div className="relative z-10 px-4 mb-4">
+        <Badge
+          className="text-xs px-3 py-1"
+          style={{
+            background: themeColors.gradient,
+            color: themeColors.text,
+            border: "none",
+          }}
+        >
+          {getUserTypeLabel()}
+        </Badge>
+      </div>
+
+      {/* Navigation tabs */}
+      <div className="relative z-10 px-4 mb-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList
+            className="grid w-full h-12 p-1 rounded-full grid-cols-3 md:grid-cols-4"
+            style={{ backgroundColor: themeColors.backgroundSecondary }}
+          >
+            {getRoleTabs().map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="rounded-full text-xs md:text-sm font-medium transition-all duration-300 data-[state=active]:text-white"
+                style={{
+                  color:
+                    activeTab === tab
+                      ? themeColors.text
+                      : themeColors.textSecondary,
+                  backgroundColor:
+                    activeTab === tab ? themeColors.primary : "transparent",
+                }}
+              >
+                {tab}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Add to music app suggestion */}
+      {searchQuery && (
+        <div className="relative z-10 px-4 mb-4">
+          <div
+            className="flex items-center justify-between p-4 rounded-lg"
+            style={{ backgroundColor: themeColors.backgroundSecondary }}
+          >
+            <div className="flex items-center space-x-3">
+              <div
+                className="w-6 h-6 rounded-sm flex items-center justify-center"
+                style={{ backgroundColor: themeColors.primary }}
+              >
+                <SLogo size={16} />
+              </div>
+              <span className="text-sm" style={{ color: themeColors.text }}>
+                Ajouter à une application musicale
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hover:bg-white/10"
+              style={{ color: themeColors.textSecondary }}
+            >
+              →
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="relative z-10 px-4 pb-20">
+        {activeTab === "Artists" ? (
+          // Onglet Artists - Afficher seulement les vrais profils d'artistes
+          <ArtistsGrid />
+        ) : !searchQuery ? (
+          // Trending content when no search
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Flame
+                  className="w-5 h-5"
+                  style={{ color: themeColors.accent }}
+                />
+                <h3
+                  className="text-lg font-bold"
+                  style={{ color: themeColors.text }}
+                >
+                  Trending Now
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {trendingNow.map((item) => (
+                  <div
+                    key={item.id}
+                    className="relative aspect-video rounded-lg overflow-hidden cursor-pointer group transition-all duration-300 hover:scale-105"
+                    style={{ background: themeColors.gradient }}
+                  >
+                    {item.isLive && (
+                      <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-white rounded-full animate-ping" />
+                        <span>LIVE</span>
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                      {item.plays}
+                    </div>
+                    <div className="absolute inset-0 p-3 flex flex-col justify-end">
+                      <div className="space-y-1">
+                        <h4 className="text-white font-bold text-sm">
+                          {item.title}
+                        </h4>
+                        <p className="text-white/80 text-xs">{item.artist}</p>
+                      </div>
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                        <Play
+                          className="w-6 h-6 text-white ml-1"
+                          fill="white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : filteredResults.length === 0 ? (
+          // No results found
+          <div className="text-center py-20">
+            <h3
+              className="text-xl font-semibold mb-2"
+              style={{ color: themeColors.text }}
+            >
+              No results found
+            </h3>
+            <p style={{ color: themeColors.textSecondary }}>
+              Try searching for different keywords
+            </p>
+          </div>
+        ) : (
+          // Search results
+          <div className="grid grid-cols-2 gap-2">
+            {filteredResults.map((result) => (
+              <div
+                key={result.id}
+                onClick={() => {
+                  if (result.type === "artist") {
+                    // Extraire l'ID de l'artiste du résultat
+                    const artistId = result.id.split("-")[2]; // real-artist-{id}-{random}
+                    if (artistId) {
+                      // Navigation vers le profil de l'artiste
+                      window.location.href = `/artist/${artistId}`;
+                    }
+                  }
+                }}
+                className="relative aspect-[9/16] rounded-lg overflow-hidden cursor-pointer group transition-all duration-300 hover:scale-[1.02]"
+                style={{ background: themeColors.gradient }}
+              >
+                <div className="absolute inset-0">
+                  <div
+                    className="absolute inset-0 animate-pulse"
+                    style={{ background: themeColors.overlay }}
+                  />
+                </div>
+                <div className="absolute top-3 left-3">
+                  <Avatar className="w-8 h-8 border-2 border-white/50">
+                    <AvatarFallback
+                      className="text-white font-bold text-xs"
+                      style={{ background: themeColors.accent }}
+                    >
+                      {result.artist[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <div className="absolute inset-0 p-3 flex flex-col justify-between">
+                  <div className="flex justify-between items-start">
+                    {result.duration && (
+                      <div className="bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                        {result.duration}
+                      </div>
+                    )}
+                    {result.verified && (
+                      <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                        ✓
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 flex items-center justify-center">
+                    {(result.type === "video" || result.type === "song") && (
+                      <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                        <Play
+                          className="w-8 h-8 text-white ml-1"
+                          fill="white"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-white font-semibold text-sm truncate">
+                          {result.title}
+                        </h4>
+                        <p className="text-white/80 text-xs truncate">
+                          {result.artist}
+                        </p>
+                        {result.views && (
+                          <p className="text-white/60 text-xs">
+                            {result.views}
+                          </p>
+                        )}
+                      </div>
+                      <div className="ml-2">
+                        {userRole === "investor" || userRole === "label" ? (
+                          <Button
+                            size="sm"
+                            className="text-xs h-8 px-3 rounded-full"
+                            style={{
+                              background: themeColors.accent,
+                              color: "white",
+                              border: "none",
+                            }}
+                          >
+                            {getRoleAction()}
+                          </Button>
+                        ) : (
+                          <div className="flex flex-col items-center space-y-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                alert(
+                                  `Vous suivez maintenant ${result.artist}!`
+                                );
+                              }}
+                            >
+                              <Heart className="w-4 h-4 text-white" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 p-0"
+                            >
+                              <Share className="w-4 h-4 text-white" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {result.genre && (
+                      <Badge
+                        className="text-xs rounded-full"
+                        style={{
+                          backgroundColor: `${themeColors.accent}40`,
+                          color: "white",
+                          border: `1px solid ${themeColors.accent}60`,
+                        }}
+                      >
+                        #{result.genre}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Floating action button for artists */}
+      {userRole === "artist" && (
+        <div className="fixed bottom-20 right-4 z-20">
+          <Button
+            className="w-14 h-14 rounded-full shadow-lg"
+            style={{
+              background: themeColors.gradient,
+              color: themeColors.text,
+            }}
+          >
+            +
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

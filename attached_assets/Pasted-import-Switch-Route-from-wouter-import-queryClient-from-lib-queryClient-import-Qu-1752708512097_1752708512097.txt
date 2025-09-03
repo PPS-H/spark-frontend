@@ -1,0 +1,147 @@
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/components/auth-provider";
+import { LanguageProvider } from "@/contexts/LanguageContext";
+import { useAuth } from "@/hooks/useAuth";
+import MarketingHome from "@/pages/marketing-home";
+import ArtistHome from "@/pages/artist-home";
+import InvestorHome from "@/pages/investor-home";
+import LabelHome from "@/pages/label-home";
+import UserHome from "@/pages/user-home";
+import SearchPage from "@/pages/search";
+import AnalyticsPage from "@/pages/analytics";
+import SettingsPage from "@/pages/settings";
+import CreatePage from "@/pages/create";
+import PortfolioPage from "@/pages/portfolio";
+import AdminDashboardPage from "@/pages/admin-dashboard";
+import ArtistRegistrationPage from "@/pages/artist-registration-page";
+import InvestorRegistrationPage from "@/pages/investor-registration-page";
+import LabelRegistrationPage from "@/pages/label-registration-page";
+import RosterManagement from "@/pages/roster-management";
+import AnalyticsDashboard from "@/pages/analytics-dashboard";
+import ArtistProfile from "@/pages/artist-profile";
+import InvestArtistPage from "@/pages/invest-artist";
+import DownloadProject from "@/pages/download-project";
+import NotFound from "@/pages/not-found";
+import RoleBasedNavigation from "@/components/role-based-navigation";
+
+// WebSocket pour données en temps réel
+import { io } from "socket.io-client";
+
+// Firebase pour authentification
+import { initializeApp } from "firebase/app";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+
+// Configuration Firebase (remplace par tes clés)
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// Connexion WebSocket
+const socket = io("http://localhost:3000"); // Remplace par ton serveur
+
+socket.on("connect", () => {
+  console.log("Connecté au WebSocket à 12:35 AM CEST, 17/07/2025");
+});
+
+socket.on("investmentUpdate", (data) => {
+  console.log("Mise à jour des investissements:", data);
+  queryClient.setQueryData(["investments"], (oldData: any) => ({
+    ...oldData,
+    ...data,
+  }));
+});
+
+function ConditionalHome() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading || !isAuthenticated) {
+    return <MarketingHome />;
+  }
+
+  console.log("User role:", user?.role, "User:", user);
+
+  switch (user?.role) {
+    case "artist":
+      return <ArtistHome />;
+    case "investor":
+      return <InvestorHome />;
+    case "label":
+      return <LabelHome />;
+    case "fan":
+      return <UserHome />;
+    case "user":
+    default:
+      return <UserHome />;
+  }
+}
+
+function Router() {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
+      <Switch>
+        <Route path="/" component={ConditionalHome} />
+        <Route path="/artist-register" component={ArtistRegistrationPage} />
+        <Route path="/investor-register" component={InvestorRegistrationPage} />
+        <Route path="/label-register" component={LabelRegistrationPage} />
+        <Route path="/search" component={SearchPage} />
+        <Route path="/analytics" component={AnalyticsPage} />
+        <Route path="/create" component={CreatePage} />
+        <Route path="/portfolio" component={PortfolioPage} />
+        <Route path="/admin" component={AdminDashboardPage} />
+        <Route path="/settings" component={SettingsPage} />
+        <Route path="/roster" component={RosterManagement} />
+        <Route path="/analytics-dashboard" component={AnalyticsDashboard} />
+        <Route path="/artist/:artistId" component={ArtistProfile} />
+        <Route path="/invest/:artistSlug" component={InvestArtistPage} />
+        <Route path="/download-project" component={DownloadProject} />
+        <Route path="/download" component={() => import("@/pages/download").then(m => m.default)} />
+        <Route component={NotFound} />
+      </Switch>
+      {isAuthenticated && <RoleBasedNavigation />}
+    </div>
+  );
+}
+
+function App() {
+  useEffect(() => {
+    // Vérification de l'authentification au démarrage
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("Utilisateur connecté:", user.email);
+      } else {
+        console.log("Aucun utilisateur connecté");
+      }
+    });
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="dark" storageKey="sparkvibe-theme">
+        <LanguageProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;

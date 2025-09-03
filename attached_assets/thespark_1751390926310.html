@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Invest in music artists from around the world with SparkVibe Neo. Discover diverse talents and track your investments in real-time.">
+    <meta name="keywords" content="music investment, SparkVibe Neo, artists, crowdfunding, rap, pop, afrobeats">
+    <meta name="author" content="xAI Grok 3">
+    <title>SparkVibe Neo - Music Investment Platform</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a, #0d0d0d);
+            color: #fff;
+            overflow-x: hidden;
+            line-height: 1.6;
+            transition: all 0.3s;
+        }
+        body.light-mode {
+            background: linear-gradient(135deg, #f0f0f0, #d0d0d0);
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #00ffcc;
+            text-shadow: 0 0 15px #00ffcc, 0 0 25px #00ffcc;
+            animation: neonPulse 2s ease-in-out infinite alternate;
+        }
+        @keyframes neonPulse {
+            from { text-shadow: 0 0 10px #00ffcc; }
+            to { text-shadow: 0 0 30px #00ffcc, 0 0 40px #ff00ff; }
+        }
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .theme-toggle, .login-btn {
+            background: #333;
+            color: #00ffcc;
+            border: 2px solid #00ffcc;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .theme-toggle:hover, .login-btn:hover {
+            background: #00ffcc;
+            color: #1a1a1a;
+        }
+        .filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .filters input, .filters select, .filters button {
+            padding: 8px 12px;
+            background: #333;
+            color: #00ffcc;
+            border: 2px solid #00ffcc;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .filters input:hover, .filters select:hover, .filters button:hover {
+            background: #00ffcc;
+            color: #1a1a1a;
+        }
+        .hamburger {
+            display: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .artist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin: 20px 0;
+        }
+        .artist-card {
+            background: rgba(34, 34, 34, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid;
+            overflow: hidden;
+            position: relative;
+            animation: fadeInCard 0.5s ease-in;
+        }
+        .artist-card.light-mode {
+            background: rgba(240, 240, 240, 0.9);
+            border-color: #333;
+        }
+        @keyframes fadeInCard {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .artist-card img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 5px;
+            filter: brightness(70%);
+            transition: filter 0.3s;
+            opacity: 0;
+            animation: lazyLoad 0.5s forwards;
+        }
+        @keyframes lazyLoad {
+            to { opacity: 1; }
+        }
+        .artist-card:hover img {
+            filter: brightness(90%);
+        }
+        .artist-card h3 {
+            margin: 10px 0;
+            color: #00ffcc;
+        }
+        .artist-card.light-mode h3 {
+            color: #1a1a1a;
+        }
+        .artist-card a {
+            color: #ff00ff;
+            text-decoration: none;
+            margin-right: 10px;
+            transition: color 0.3s;
+        }
+        .artist-card a:hover {
+            color: #ff66ff;
+            text-decoration: underline;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #444;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s;
+        }
+        .invest-btn {
+            background: #ff00ff;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .invest-btn:hover {
+            background: #cc00cc;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #222;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #00ffcc;
+            text-align: center;
+            max-width: 400px;
+            animation: fadeIn 0.3s;
+        }
+        .modal-content.light-mode {
+            background: #f0f0f0;
+            border-color: #333;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .close-btn {
+            background: #ff00ff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            color: #fff;
+            margin: 5px;
+        }
+        .close-btn.light-mode {
+            background: #cc00cc;
+            color: #fff;
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #00ffcc;
+            color: #1a1a1a;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            animation: slideIn 0.5s;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        .dashboard {
+            margin-top: 30px;
+            background: rgba(51, 51, 51, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #00ffcc;
+            position: relative;
+        }
+        .dashboard.light-mode {
+            background: rgba(240, 240, 240, 0.9);
+            border-color: #333;
+        }
+        canvas {
+            width: 100%;
+            height: 100px;
+            margin-top: 10px;
+        }
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ffcc;
+        }
+        .history {
+            margin-top: 20px;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+        }
+        .history.light-mode {
+            background: #ddd;
+        }
+        .chart-filters {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        @media (max-width: 600px) {
+            .hamburger { display: block; }
+            .filters { display: none; }
+            .filters.active { display: flex; flex-direction: column; gap: 10px; }
+            .artist-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <h1>SparkVibe Neo</h1>
+            <div class="hamburger" onclick="toggleFilters()">☰</div>
+            <button class="login-btn" onclick="login()">Login</button>
+            <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+        </div>
+        <div class="filters" id="filters">
+            <input type="text" id="search-artist" placeholder="Search by name..." onkeyup="filterArtists()">
+            <select id="country-filter" onchange="filterArtists()">
+                <option value="all">All Countries</option>
+                <option value="france">France</option>
+                <option value="usa">USA</option>
+                <option value="nigeria">Nigeria</option>
+                <option value="southkorea">South Korea</option>
+                <option value="japan">Japan</option>
+                <option value="canada">Canada</option>
+            </select>
+            <select id="genre-filter" onchange="filterArtists()">
+                <option value="all">All Genres</option>
+                <option value="rap">Rap</option>
+                <option value="pop">Pop</option>
+                <option value="afrobeats">Afrobeats</option>
+                <option value="k-pop">K-pop</option>
+                <option value="j-pop">J-pop</option>
+                <option value="indie">Indie Folk</option>
+            </select>
+        </div>
+        <div class="artist-grid" id="artist-grid">
+            <div class="artist-card" data-country="france" data-genre="rap" data-name="Léo" style="border-color: #00cc99;">
+                <img src="https://via.placeholder.com/250x150?text=Léo+Rap" alt="Léo" loading="lazy">
+                <h3>Léo (French Rap)</h3>
+                <a href="https://open.spotify.com/artist/5M9FX6K3T7o3Kz3iLyC0hJ" target="_blank">Spotify</a>
+                <a href="https://www.youtube.com/@leofrenchrap" target="_blank">YouTube</a>
+                <a href="https://www.deezer.com/artist/leo" target="_blank">Deezer</a>
+                <div class="progress-bar"><div class="progress" style="width: 75%; background: #00cc99;"></div></div>
+                <div class="stats">Funds Raised: $75,000 / $100,000</div>
+                <button class="invest-btn" onclick="showModal('leo', 75000, 100000, 25000)">Invest</button>
+            </div>
+            <div class="artist-card" data-country="usa" data-genre="pop" data-name="Mia" style="border-color: #ff9999;">
+                <img src="https://via.placeholder.com/250x150?text=Mia+Pop" alt="Mia" loading="lazy">
+                <h3>Mia (US Pop)</h3>
+                <a href="https://open.spotify.com/artist/6eUKZXaKkcviHQUhycCKoQ" target="_blank">Spotify</a>
+                <a href="https://www.youtube.com/@miapop" target="_blank">YouTube</a>
+                <a href="https://www.deezer.com/artist/mia" target="_blank">Deezer</a>
+                <div class="progress-bar"><div class="progress" style="width: 60%; background: #ff9999;"></div></div>
+                <div class="stats">Funds Raised: $60,000 / $80,000</div>
+                <button class="invest-btn" onclick="showModal('mia', 60000, 80000, 20000)">Invest</button>
+            </div>
+            <div class="artist-card" data-country="nigeria" data-genre="afrobeats" data-name="Burna Boy" style="border-color: #ffcc00;">
+                <img src="https://via.placeholder.com/250x150?text=Burna+Boy+Afrobeats" alt="Burna Boy" loading="lazy">
+                <h3>Burna Boy (Nigerian Afrobeats)</h3>
+                <a href="https://open.spotify.com/artist/3wcj11K77LjEY1PkEazffa" target="_blank">Spotify</a>
+                <a href="https://www.youtube.com/@burnaboy" target="_blank">YouTube</a>
+                <a href="https://www.deezer.com/artist/burnaboy" target="_blank">Deezer</a>
+                <div class="progress-bar"><div class="progress" style="width: 90%; background: #ffcc00;"></div></div>
+                <div class="stats">Funds Raised: $90,000 / $120,000</div>
+                <button class="invest-btn" onclick="showModal('burnaboy', 90000, 120000, 30000)">Invest</button>
+            </div>
+            <div class="artist-card" data-country="southkorea" data-genre="k-pop" data-name="Rosé" style="border-color: #ff66cc;">
+                <img src="https://via.placeholder.com/250x150?text=Rosé+K-pop" alt="Rosé" loading="lazy">
+                <h3>Rosé (K-pop)</h3>
+                <a href="https://open.spotify.com/artist/2sRbsy7kQfX9Q0f8v5Q3g5" target="_blank">Spotify</a>
+                <a href="https://www.youtube.com/@rosesareblackpink" target="_blank">YouTube</a>
+                <a href="https://www.deezer.com/artist/rose" target="_blank">Deezer</a>
+                <div class="progress-bar"><div class="progress" style="width: 110%; background: #ff66cc;"></div></div>
+                <div class="stats">Funds Raised: $110,000 / $150,000</div>
+                <button class="invest-btn" onclick="showModal('rose', 110000, 150000, 40000)">Invest</button>
+            </div>
+            <div class="artist-card" data-country="japan" data-genre="j-pop" data-name="LunaX" style="border-color: #66ccff;">
+                <img src="https://via.placeholder.com/250x150?text=LunaX+J-pop" alt="LunaX" loading="lazy">
+                <h3>LunaX (Japanese J-pop)</h3>
+                <a href="https://open.spotify.com/artist/lunax" target="_blank">Spotify</a>
+                <a href="https://www.youtube.com/@lunaxjpop" target="_blank">YouTube</a>
+                <a href="https://www.deezer.com/artist/lunax" target="_blank">Deezer</a>
+                <div class="progress-bar"><div class="progress" style="width: 40%; background: #66ccff;"></div></div>
+                <div class="stats">Funds Raised: $40,000 / $70,000</div>
+                <button class="invest-btn" onclick="showModal('lunax', 40000, 70000, 15000)">Invest</button>
+            </div>
+            <div class="artist-card" data-country="canada" data-genre="indie" data-name="Alex" style="border-color: #99ff99;">
+                <img src="https://via.placeholder.com/250x150?text=Alex+Indie" alt="Alex" loading="lazy">
+                <h3>Alex (Canadian Indie Folk)</h3>
+                <a href="https://open.spotify.com/artist/alexindie" target="_blank">Spotify</a>
+                <a href="https://www.youtube.com/@alexindiefolk" target="_blank">YouTube</a>
+                <a href="https://www.deezer.com/artist/alex" target="_blank">Deezer</a>
+                <div class="progress-bar"><div class="progress" style="width: 25%; background: #99ff99;"></div></div>
+                <div class="stats">Funds Raised: $25,000 / $50,000</div>
+                <button class="invest-btn" onclick="showModal('alex', 25000, 50000, 10000)">Invest</button>
+            </div>
+        </div>
+        <div class="dashboard">
+            <h2>Real-Time Dashboard</h2>
+            <div class="loading" id="loading">Loading...</div>
+            <p>Total Investments: <span id="total-invest">$400,000</span></p>
+            <p>Active Investors: <span id="active-investors">1,200</span></p>
+            <p>Average Return: <span id="avg-return">8%</span></p>
+            <div class="chart-filters">
+                <select id="time-filter" onchange="updateStats()">
+                    <option value="day">Last Day</option>
+                    <option value="week">Last Week</option>
+                    <option value="month">Last Month</option>
+                </select>
+                <button onclick="exportStats()">Export CSV</button>
+            </div>
+            <canvas id="investmentChart"></canvas>
+        </div>
+        <div class="history" id="investment-history">
+            <h3>Investment History</h3>
+            <ul id="history-list"></ul>
+        </div>
+    </div>
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h3 id="modal-artist"></h3>
+            <p>Current Funds: $<span id="modal-current"></span> / $<span id="modal-goal"></span></p>
+            <p>Escrow Protected: Yes</p>
+            <p>Enter investment amount: $<input type="number" id="invest-amount" min="1" max="10000"></p>
+            <p>Remaining limit: $<span id="user-limit">10000</span></p>
+            <button class="close-btn" onclick="closeModal()">Close</button>
+            <button class="close-btn" onclick="confirmInvest()">Confirm</button>
+        </div>
+    </div>
+    <div class="notification" id="notification"></div>
+
+    <script>
+        let userLimit = 10000; // Limite simulée par utilisateur
+        let investmentHistory = [];
+        let currentUser = null;
+
+        const artistsData = {
+            leo: { country: "france", genre: "rap", name: "Léo", current: 75000, goal: 100000, color: "#00cc99", escrow: 25000 },
+            mia: { country: "usa", genre: "pop", name: "Mia", current: 60000, goal: 80000, color: "#ff9999", escrow: 20000 },
+            burnaboy: { country: "nigeria", genre: "afrobeats", name: "Burna Boy", current: 90000, goal: 120000, color: "#ffcc00", escrow: 30000 },
+            rose: { country: "southkorea", genre: "k-pop", name: "Rosé", current: 110000, goal: 150000, color: "#ff66cc", escrow: 40000 },
+            lunax: { country: "japan", genre: "j-pop", name: "LunaX", current: 40000, goal: 70000, color: "#66ccff", escrow: 15000 },
+            alex: { country: "canada", genre: "indie", name: "Alex", current: 25000, goal: 50000, color: "#99ff99", escrow: 10000 }
+        };
+
+        function login() {
+            const username = prompt("Enter your username:");
+            if (username) {
+                currentUser = username;
+                alert(`Welcome, ${currentUser}!`);
+            }
+        }
+
+        function filterArtists() {
+            const search = document.getElementById('search-artist').value.toLowerCase();
+            const country = document.getElementById('country-filter').value;
+            const genre = document.getElementById('genre-filter').value;
+            const cards = document.querySelectorAll('.artist-card');
+
+            cards.forEach(card => {
+                const cardName = card.dataset.name.toLowerCase();
+                const cardCountry = card.dataset.country;
+                const cardGenre = card.dataset.genre;
+                card.style.display = (search === "" || cardName.includes(search)) &&
+                                    (country === 'all' || cardCountry === country) && 
+                                    (genre === 'all' || cardGenre === genre) ? 'block' : 'none';
+            });
+        }
+
+        function toggleFilters() {
+            document.getElementById('filters').classList.toggle('active');
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            document.querySelectorAll('.artist-card').forEach(card => card.classList.toggle('light-mode'));
+            document.querySelector('.modal-content').classList.toggle('light-mode');
+            document.querySelector('.dashboard').classList.toggle('light-mode');
+            document.querySelector('.history').classList.toggle('light-mode');
+            document.querySelectorAll('.close-btn').forEach(btn => btn.classList.toggle('light-mode'));
+        }
+
+        function showModal(artist, current, goal, escrow) {
+            const modal = document.getElementById('modal');
+            document.getElementById('modal-artist').textContent = artistsData[artist].name;
+            document.getElementById('modal-current').textContent = current;
+            document.getElementById('modal-goal').textContent = goal;
+            document.getElementById('user-limit').textContent = userLimit;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('invest-amount').value = '';
+        }
+
+        function confirmInvest() {
+            const amount = parseInt(document.getElementById('invest-amount').value);
+            const artist = document.getElementById('modal-artist').textContent;
+            const escrow = artistsData[Object.keys(artistsData).find(key => artistsData[key].name === artist)].escrow;
+
+            if (amount > 0 && amount <= userLimit && amount <= 10000 && amount <= escrow && currentUser) {
+                userLimit -= amount;
+                investmentHistory.push({ user: currentUser, artist, amount, date: new Date().toLocaleString() });
+                updateHistory();
+                showNotification(`Investment of $${amount} in ${artist} by ${currentUser} confirmed! Escrow: $${escrow - amount} remaining.`);
+                closeModal();
+            } else {
+                alert('Please login and ensure the amount is within your limit ($10,000 max), available escrow, and positive.');
+            }
+        }
+
+        function updateHistory() {
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = '';
+            investmentHistory.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = `${item.date}: ${item.user} invested $${item.amount} in ${item.artist}`;
+                historyList.appendChild(li);
+            });
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        function updateStats() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            const timeFilter = document.getElementById('time-filter').value;
+            let baseValue = 400000;
+            let investorBase = 1200;
+            let returnBase = 8;
+
+            if (timeFilter === 'week') {
+                baseValue *= 1.1;
+                investorBase *= 1.05;
+                returnBase *= 1.02;
+            } else if (timeFilter === 'month') {
+                baseValue *= 1.2;
+                investorBase *= 1.1;
+                returnBase *= 1.05;
+            }
+
+            setTimeout(() => {
+                const totalInvest = Math.floor(Math.random() * 100000) + baseValue;
+                const activeInvestors = Math.floor(Math.random() * 500) + investorBase;
+                const avgReturn = (Math.random() * 5 + returnBase).toFixed(1);
+                document.getElementById('total-invest').textContent = `$${totalInvest}`;
+                document.getElementById('active-investors').textContent = `${activeInvestors}`;
+                document.getElementById('avg-return').textContent = `${avgReturn}%`;
+                updateChart([totalInvest, activeInvestors, avgReturn * 10]);
+                loading.style.display = 'none';
+            }, 1000);
+        }
+
+        function updateChart(data) {
+            const ctx = document.getElementById('investmentChart').getContext('2d');
+            if (window.myChart) window.myChart.destroy();
+            window.myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Total Invest', 'Active Investors', 'Avg Return (x10)'],
+                    datasets: [{
+                        label: 'Stats',
+                        data: data,
+                        backgroundColor: ['#00ffcc', '#ff00ff', '#ffcc00']
+                    }]
+                },
+                options: {
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { labels: { color: '#fff' } } }
+                }
+            });
+        }
+
+        function exportStats() {
+            const totalInvest = document.getElementById('total-invest').textContent;
+            const activeInvestors = document.getElementById('active-investors').textContent;
+            const avgReturn = document.getElementById('avg-return').textContent;
+            const csv = `Data,Value\nTotal Investments,${totalInvest}\nActive Investors,${activeInvestors}\nAverage Return,${avgReturn}`;
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sparkvibe_stats.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showNotification('Stats exported as CSV!');
+        }
+
+        setInterval(updateStats, 5000);
+        updateStats(); // Initialisation immédiate
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html>

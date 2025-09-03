@@ -1,0 +1,65 @@
+Objectif global :
+Mettre en place un système complet de redistribution automatisée des revenus musicaux, 100% légal, connecté aux principales plateformes (Spotify, Deezer, DistroKid, etc.), avec gestion :
+	•	des contrats intelligents (smart contracts),
+	•	de la compliance légale (KYC/AML),
+	•	de la traçabilité des revenus,
+	•	et de la redistribution automatique vers les investisseurs et artistes.
+
+⸻
+
+✅ Étapes à suivre pour les développeurs (ordre précis)
+
+⸻
+
+1. 🎧 Connexion aux APIs des distributeurs & plateformes de streaming
+
+À faire :
+	•	Intégrer les APIs suivantes :
+	•	Spotify for Artists API
+	•	Deezer API
+	•	Apple Music API
+	•	DistroKid API (ou via webhook s’ils n’ont pas d’API publique)
+	•	TuneCore / CD Baby / Amuse si concerné
+	•	Stocker les données suivantes :
+	•	Revenus générés par track / album
+	•	Nombre de streams par plateforme
+	•	Payout dates & royalties per track
+	•	Identifiants ISRC & splits
+
+Ressources pour devs :
+	•	https://developer.spotify.com/documentation/web-api/
+	•	https://developers.deezer.com/api
+	•	https://developer.apple.com/documentation/applemusicapi/
+	•	DistroKid webhooks (ou contact dev support)
+
+⸻
+
+2. ⚖️ Compliance légale (automatisée)
+
+À faire :
+	•	Intégrer un service tiers de KYC/AML vérification (pour être conforme dans tous les pays : US, EU, etc.)
+	•	Recommandé : Sumsub, Stripe Identity, IDnow, Veriff
+	•	Vérifier les rôles :
+	•	Investisseur = KYC + source des fonds
+	•	Artiste = identité + paiement
+	•	Stocker les statuts de vérification (kyc_verified, aml_score, jurisdiction) dans la base utilisateur
+
+⸻
+
+3. 📜 Smart Contracts générés automatiquement
+
+À faire :
+	•	Générer un contrat PDF ou numérique signé à chaque investissement (via DocuSign API ou HelloSign)
+	•	Inclure :
+	•	Montant investi
+	•	Part de revenu (en %)
+	•	Durée d’engagement
+	•	Juridiction applicable
+	•	En parallèle, générer un smart contract JSON signé (option blockchain si prévu plus tard)
+
+⸻
+
+4. 💸 Redistribution automatique des revenus
+
+À faire :
+	•	Chaque mois, calculer :

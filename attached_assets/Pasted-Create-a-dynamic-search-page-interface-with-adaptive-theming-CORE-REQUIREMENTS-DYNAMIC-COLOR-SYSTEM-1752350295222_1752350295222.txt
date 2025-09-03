@@ -1,0 +1,42 @@
+Create a dynamic search page interface with adaptive theming
+CORE REQUIREMENTS:
+DYNAMIC COLOR SYSTEM:
+	•	Implement random color theme generation that changes on page load/session start
+	•	Create color palette variations (gradients, accent colors, overlays)
+	•	Maintain consistent color harmony within each session
+	•	Store theme temporarily (session-based, not persistent)
+	•	Generate complementary colors for text contrast and UI elements
+FLEXIBLE LAYOUT APPROACH:
+	•	Design components that adapt to existing app structure
+	•	Use modular CSS classes that can integrate with current theme
+	•	Flexible grid system that adjusts to container constraints
+	•	Responsive breakpoints that work with existing navigation/UI
+ADAPTIVE CARD DESIGN:
+	•	Video cards with dynamic background overlays matching theme
+	•	Gradient overlays that use session theme colors
+	•	Accent colors for interactive elements (hover, focus states)
+	•	Theme-aware text contrast for readability
+	•	Adaptive shadow/glow effects using theme colors
+INTEGRATION-FRIENDLY STRUCTURE:
+	•	Component-based approach for easy integration
+	•	CSS variables for theme customization
+	•	Modular styles that don’t conflict with existing CSS
+	•	Flexible positioning that adapts to parent containers
+	•	Theme system that extends existing app colors
+VISUAL CONSISTENCY:
+	•	Maintain core layout principles while adapting to app theme
+	•	Consistent spacing and typography hierarchy
+	•	Smooth color transitions between theme changes
+	•	Visual harmony with existing app elements
+TECHNICAL IMPLEMENTATION:
+	•	Generate random HSL color values on initialization
+	•	Create theme object with primary, secondary, accent colors
+	•	Use CSS custom properties for theme application
+	•	Implement smooth color transitions
+	•	Ensure accessibility compliance across all theme variations
+BEHAVIORAL NOTES:
+	•	New color theme each time user returns to search
+	•	Maintain theme consistency during single session
+	•	Adapt visual weight and contrast based on generated colors
+	•	Preserve core UX patterns while varying aesthetics
+Build a search interface that feels native to the existing app while bringing fresh visual variety through dynamic themin

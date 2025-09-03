@@ -1,0 +1,118 @@
+import { createContext, useContext, ReactNode, useEffect } from "react";
+import { useAuth as useCustomAuth } from "@/hooks/useAuth"; // Renommé pour éviter confusion
+import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged, User } from "firebase/auth";
+import { initializeApp } from "firebase/app";
+
+// Configuration Firebase (remplace par tes clés)
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (credentials: { email: string; password: string }) => Promise<void>;
+  logout: () => Promise<void>;
+  register: (userData: { username: string; email: string; password: string; role?: string }) => Promise<void>;
+  isLoginLoading: boolean;
+  isLogoutLoading: boolean;
+  isRegisterLoading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [isLogoutLoading, setIsLogoutLoading] = useState(false);
+  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setIsAuthenticated(!!user);
+      setIsLoading(false);
+      console.log("Auth state changed at 12:45 AM CEST, 17/07/2025:", user?.email);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const login = async (credentials: { email: string; password: string }) => {
+    setIsLoginLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+      console.log("Login réussi");
+    } catch (error) {
+      console.error("Erreur login:", error);
+      throw error;
+    } finally {
+      setIsLoginLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    setIsLogoutLoading(true);
+    try {
+      await signOut(auth);
+      console.log("Logout réussi");
+    } catch (error) {
+      console.error("Erreur logout:", error);
+      throw error;
+    } finally {
+      setIsLogoutLoading(false);
+    }
+  };
+
+  const register = async (userData: { username: string; email: string; password: string; role?: string }) => {
+    setIsRegisterLoading(true);
+    try {
+      const { user } = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+      // Stocker le rôle dans un profil personnalisé (à implémenter côté Firebase)
+      if (user && userData.role) {
+        await user.updateProfile({ displayName: userData.username });
+        console.log("Inscription réussie, rôle:", userData.role);
+      }
+    } catch (error) {
+      console.error("Erreur inscription:", error);
+      throw error;
+    } finally {
+      setIsRegisterLoading(false);
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    isLoading,
+    isAuthenticated,
+    login,
+    logout,
+    register,
+    isLoginLoading,
+    isLogoutLoading,
+    isRegisterLoading,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuthContext() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuthContext must be used within an AuthProvider");
+  }
+  return context;
+}

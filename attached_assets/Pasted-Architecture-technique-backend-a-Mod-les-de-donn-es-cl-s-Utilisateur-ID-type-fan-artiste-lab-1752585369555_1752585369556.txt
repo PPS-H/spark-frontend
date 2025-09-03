@@ -1,0 +1,61 @@
+Architecture technique backend
+
+a) Modèles de données clés
+	•	Utilisateur (ID, type: fan/artiste/label, email, wallet crypto, etc.)
+	•	Projet artistique (ID, artiste, description, montant cible, status financement)
+	•	Investissement (ID, utilisateur, projet, montant, date, % part calculé)
+	•	Revenus (ID, source streaming/vente, montant, date)
+	•	Paiements (ID, utilisateur, montant, date, statut)
+
+b) Calcul automatique des parts
+	•	Part fan = (montant investi par fan) / (total levé sur projet)
+	•	Paiements versés proportionnellement à cette part sur les revenus générés
+	•	Gestion de plafonds et durée maximale définie par contrat
+
+c) API paiement & versements
+	•	Intégration Stripe Connect : paiements multi-parties & versements automatisés
+	•	PayPal Payouts : solution alternative
+	•	Coinbase Commerce (option crypto)
+	•	Escrow intégré : fonds bloqués avant redistribution
+
+d) Monitoring & alertes
+	•	Dashboard backend pour suivi en temps réel
+	•	Alertes emails et SMS si paiement retardé ou erreur
+	•	Logs et audits
+
+⸻
+
+2. Architecture frontend (extraits)
+	•	Dashboards utilisateurs personnalisés (parts, paiements, historique)
+	•	Interface d’investissement simple & sécurisée
+	•	Visualisation des performances des projets
+	•	Section FAQ juridique et transparence
+
+⸻
+
+3. Modèles contractuels stricts
+	•	Contrat standard d’investissement digital
+	•	Clauses d’automatisation des paiements obligatoires
+	•	Sanctions en cas de non respect (amendes, suspension)
+	•	Adaptations par pays (USA, Corée, Afrique, LATAM)
+	•	RGPD et conformité données
+
+⸻
+
+4. Système de paiement garanti & verrouillé
+	•	Paiements 100% automatiques, sans intervention humaine possible
+	•	Escrow : sécurisation des fonds
+	•	Option smart contracts (phase 2) pour immutabilité
+	•	Monitoring continu & support dédié
+
+⸻
+
+5. Plan communication
+	•	Emails automatisés : confirmations, paiements, rappels
+	•	Notifications push & dashboard en temps réel
+	•	Webinars réguliers Q&A avec artistes/investisseurs
+	•	Support multilingue
+
+⸻
+
+6. Roadmap & planning

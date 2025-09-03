@@ -1,0 +1,141 @@
+import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
+import { registerRoutes } from "./routes";
+import { setupVite, serveStatic, log } from "./vite";
+import { Server } from "http";
+import { Server as SocketIOServer } from "socket.io";
+import https from "https";
+import fs from "fs";
+
+// Initialisation de l'application
+const app = express();
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: false, limit: "50mb" }));
+
+// Configuration de la session
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "spark-dev-secret-key-12345",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // True en production avec HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: "lax", // Sécurité contre CSRF
+    },
+  })
+);
+
+declare module "express-session" {
+  interface SessionData {
+    userId?: number;
+    spotifyTokens?: any;
+    youtubeTokens?: any;
+    tiktokTokens?: any;
+    deezerTokens?: any;
+  }
+}
+
+// Middleware de logging amélioré
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse).slice(0, 50)}...`; // Limite à 50 chars
+      }
+      log(logLine.length > 80 ? logLine.slice(0, 79) + "…" : logLine);
+    }
+  });
+
+  next();
+});
+
+// Initialisation des services automatisés
+(async () => {
+  try {
+    await import("./payment-automation");
+    await import("./compliance-service");
+    await import("./contract-service");
+    console.log("🚀 Automated payment system initialized and running");
+    console.log("🛡️ Compliance monitoring service initialized");
+    console.log("📄 Contract generation service initialized");
+  } catch (error) {
+    log(`Erreur lors de l'initialisation des services: ${error.message}`);
+  }
+
+  const server = await registerRoutes(app);
+
+  // Gestion des erreurs globales
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    res.status(status).json({ message });
+    log(`Erreur ${status}: ${message}`);
+  });
+
+  // Configuration WebSocket pour données en temps réel
+  const httpServer: Server = app.listen(5000, "0.0.0.0", () => {
+    log(`Serving on port 5000 at 12:44 AM CEST, 17/07/2025`);
+  });
+
+  const io = new SocketIOServer(httpServer, {
+    cors: {
+      origin: process.env.NODE_ENV === "production" ? "https://yourdomain.com" : "http://localhost:5000",
+      methods: ["GET", "POST"],
+    },
+  });
+
+  io.on("connection", (socket) => {
+    console.log("Utilisateur connecté via WebSocket");
+    socket.on("investmentUpdate", (data) => {
+      io.emit("investmentUpdate", data); // Diffuse les mises à jour
+      log(`Mise à jour investissement émise: ${JSON.stringify(data).slice(0, 50)}...`);
+    });
+    socket.on("disconnect", () => {
+      console.log("Utilisateur déconnecté via WebSocket");
+    });
+  });
+
+  // HTTPS en production (à configurer avec certificats)
+  if (process.env.NODE_ENV === "production") {
+    const httpsOptions = {
+      key: fs.readFileSync("path/to/private.key"),
+      cert: fs.readFileSync("path/to/certificate.crt"),
+    };
+    https.createServer(httpsOptions, app).listen(443, "0.0.0.0", () => {
+      log("Serving securely on port 443");
+    });
+  }
+
+  // Vite en développement, statique en production
+  if (app.get("env") === "development") {
+    await setupVite(app, httpServer);
+  } else {
+    serveStatic(app);
+  }
+
+  // Gestion robuste du démarrage
+  httpServer.on("error", (error: any) => {
+    if (error.code === "EADDRINUSE") {
+      log(`Port 5000 is already in use. Attempting to restart...`);
+      setTimeout(() => {
+        httpServer.listen(5000, "0.0.0.0");
+      }, 2000);
+    } else {
+      log(`Erreur serveur: ${error.message}`);
+    }
+  });
+})();

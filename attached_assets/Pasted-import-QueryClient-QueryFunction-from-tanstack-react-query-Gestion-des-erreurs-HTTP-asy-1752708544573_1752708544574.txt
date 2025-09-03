@@ -1,0 +1,108 @@
+import { QueryClient, QueryFunction } from "@tanstack/react-query";
+
+// Gestion des erreurs HTTP
+async function throwIfResNotOk(res: Response) {
+  if (!res.ok) {
+    const text = (await res.text()) || res.statusText;
+    throw new Error(`${res.status}: ${text}`);
+  }
+}
+
+// Requête API avec gestion avancée
+export async function apiRequest(
+  method: string,
+  url: string,
+  data?: unknown | undefined,
+  token?: string, // Ajout pour authentification
+): Promise<Response> {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }), // Sécurité : ajout du token
+  };
+  const res = await fetch(url, {
+    method,
+    headers: data ? headers : {},
+    body: data ? JSON.stringify(data) : undefined,
+    credentials: "include", // Pour les cookies/session
+  });
+
+  await throwIfResNotOk(res);
+  return res;
+}
+
+// Gestion des WebSocket pour données en temps réel
+import { io } from "socket.io-client";
+const socket = io("http://localhost:3000"); // Remplace par ton serveur
+
+socket.on("connect", () => {
+  console.log("Connecté au WebSocket à 12:40 AM CEST, 17/07/2025");
+});
+
+socket.on("investmentUpdate", (data) => {
+  queryClient.setQueryData(["investments"], (oldData: any) => ({
+    ...oldData,
+    ...data,
+  }));
+  console.log("Mise à jour des investissements:", data);
+});
+
+// Fonction de requête personnalisée
+type UnauthorizedBehavior = "returnNull" | "throw";
+export const getQueryFn: <T>(options: {
+  on401: UnauthorizedBehavior;
+  token?: string; // Ajout pour le token
+}) => QueryFunction<T> =
+  ({ on401: unauthorizedBehavior, token }) =>
+  async ({ queryKey }) => {
+    const res = await fetch(queryKey[0] as string, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+    });
+
+    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      return null;
+    }
+
+    await throwIfResNotOk(res);
+    return await res.json();
+  };
+
+// Configuration du QueryClient
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryFn: getQueryFn({ on401: "throw" }), // Par défaut, throw sur 401
+      refetchInterval: false,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes (ajusté pour fraîcheur)
+      retry: 1, // 1 retry en cas d'échec
+      cacheTime: 30 * 60 * 1000, // 30 minutes de cache
+    },
+    mutations: {
+      retry: 1, // 1 retry pour les mutations
+      onError: (error) => console.error("Erreur mutation:", error), // Logging
+    },
+  },
+});
+
+// Initialisation Firebase pour authentification
+import { initializeApp } from "firebase/app";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    const token = user.getIdToken(); // Récupère le token
+    queryClient.setQueryDefaults(["auth"], { queryFn: getQueryFn({ on401: "throw", token }) });
+  }
+});

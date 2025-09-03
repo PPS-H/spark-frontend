@@ -1,0 +1,120 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged, User } from "firebase/auth";
+import { initializeApp } from "firebase/app";
+
+// Configuration Firebase (remplace par tes clés)
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  role?: string;
+}
+
+export function useAuth() {
+  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  // Intégration Firebase pour l'état d'authentification
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const token = await firebaseUser.getIdToken();
+        const userData = { id: firebaseUser.uid as unknown as number, username: firebaseUser.displayName || "", email: firebaseUser.email || "", role: localStorage.getItem("userRole") || "user" };
+        queryClient.setQueryData(["/api/auth/me"], userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("authToken", token);
+      } else {
+        queryClient.setQueryData(["/api/auth/me"], null);
+        localStorage.removeItem("user");
+        localStorage.removeItem("authToken");
+      }
+      setIsLoading(false);
+      console.log("Auth state updated at 12:50 AM CEST, 17/07/2025:", firebaseUser?.email);
+    });
+    return () => unsubscribe();
+  }, [queryClient]);
+
+  const { data: user } = useQuery({
+    queryKey: ["/api/auth/me"],
+    queryFn: () => apiRequest("GET", "/api/auth/me", undefined, localStorage.getItem("authToken")).then(res => res.json()),
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!localStorage.getItem("authToken"), // Seulement si token existe
+  });
+
+  const loginMutation = useMutation({
+    mutationFn: async (credentials: { email: string; password: string }) => {
+      if (!credentials.email || !credentials.password) {
+        throw new Error("Email and password are required");
+      }
+      const credential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+      const token = await credential.user.getIdToken();
+      localStorage.setItem("authToken", token);
+      const userData = { id: credential.user.uid as unknown as number, username: credential.user.displayName || "", email: credential.user.email || "", role: localStorage.getItem("userRole") || "user" };
+      return userData;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/auth/me"], data);
+      localStorage.setItem("user", JSON.stringify(data));
+      console.log("Login réussi à 12:50 AM CEST, 17/07/2025");
+    },
+    onError: (error) => console.error("Erreur login:", error),
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await signOut(auth);
+    },
+    onSuccess: () => {
+      queryClient.setQueryData(["/api/auth/me"], null);
+      localStorage.removeItem("user");
+      localStorage.removeItem("authToken");
+      window.location.href = "/";
+      console.log("Logout réussi à 12:50 AM CEST, 17/07/2025");
+    },
+    onError: (error) => console.error("Erreur logout:", error),
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async (userData: { username: string; email: string; password: string; role?: string }) => {
+      const credential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+      await credential.user.updateProfile({ displayName: userData.username });
+      const token = await credential.user.getIdToken();
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("userRole", userData.role || "user");
+      const registeredUser = { id: credential.user.uid as unknown as number, username: userData.username, email: userData.email, role: userData.role };
+      return registeredUser;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/auth/me"], data);
+      localStorage.setItem("user", JSON.stringify(data));
+      console.log("Inscription réussie à 12:50 AM CEST, 17/07/2025");
+    },
+    onError: (error) => console.error("Erreur inscription:", error),
+  });
+
+  return {
+    user: user as User | null,
+    isLoading,
+    isAuthenticated: !!user,
+    login: loginMutation.mutateAsync,
+    logout: logoutMutation.mutate,
+    register: registerMutation.mutateAsync,
+    isLoginLoading: loginMutation.isPending,
+    isLogoutLoading: logoutMutation.isPending,
+    isRegisterLoading: registerMutation.isPending,
+  };
+}

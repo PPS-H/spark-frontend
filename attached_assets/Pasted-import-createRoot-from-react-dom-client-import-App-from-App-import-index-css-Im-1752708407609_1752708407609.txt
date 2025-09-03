@@ -1,0 +1,97 @@
+import { createRoot } from "react-dom/client";
+import App from "./App";
+import "./index.css";
+
+// Importation pour le thème sombre/clair avec Tailwind
+import { useState, useEffect } from "react";
+
+// Importation pour WebSocket (données en temps réel)
+import { io } from "socket.io-client";
+
+// Importation pour Firebase (authentification)
+import { initializeApp } from "firebase/app";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+
+// Configuration Firebase (remplace par tes propres clés)
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+
+// Initialisation Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// Gestion du thème sombre/clair
+const ThemeManager = ({ children }: { children: React.ReactNode }) => {
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Applique le thème basé sur les préférences système ou localStorage
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const savedMode = localStorage.getItem("darkMode") === "true";
+    setDarkMode(prefersDark || savedMode);
+  }, []);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("darkMode", "true");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("darkMode", "false");
+    }
+  }, [darkMode]);
+
+  return (
+    <div className={darkMode ? "dark" : ""}>
+      <button
+        onClick={() => setDarkMode(!darkMode)}
+        className="p-2 bg-gray-200 dark:bg-gray-700 rounded"
+      >
+        Toggle {darkMode ? "Light" : "Dark"} Mode
+      </button>
+      {children}
+    </div>
+  );
+};
+
+// Connexion WebSocket pour données en temps réel
+const socket = io("http://localhost:3000"); // Remplace par ton serveur WebSocket
+
+socket.on("connect", () => {
+  console.log("Connecté au WebSocket");
+});
+
+socket.on("investmentUpdate", (data) => {
+  console.log("Mise à jour des investissements:", data);
+});
+
+const renderApp = () => {
+  const root = createRoot(document.getElementById("root")!);
+
+  // Vérification de l'état d'authentification
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      console.log("Utilisateur connecté:", user.email);
+    } else {
+      console.log("Aucun utilisateur connecté");
+    }
+    root.render(
+      <ThemeManager>
+        <App />
+      </ThemeManager>
+    );
+  });
+};
+
+// Gestion des erreurs globales
+window.addEventListener("error", (event) => {
+  console.error("Erreur globale:", event.message);
+});
+
+renderApp();
