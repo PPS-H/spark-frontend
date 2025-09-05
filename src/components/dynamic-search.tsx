@@ -1,31 +1,22 @@
 import { useState, useEffect, useMemo } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Search,
-  Filter,
   ArrowLeft,
   Play,
   Volume2,
   Heart,
   Share,
-  MoreVertical,
-  TrendingUp,
   Users,
-  Zap,
   Flame,
-  Clock,
 } from "lucide-react";
-import SparkLogo from "@/components/spark-logo";
 import SLogo from "@/components/s-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/hooks/useAuthRTK";
-import ConnectionStatus from "@/components/ConnectionStatus";
-import ArtistsGrid from "@/components/artists-grid";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLikeDislikeContentMutation, useLikeDislikeArtistMutation, useFollowUnfollowArtistMutation } from "@/store/features/api/searchApi";
+import type { GetTrendingContentResponse, ContentItem, Artist } from "@/store/features/api/searchApi";
 
 interface ThemeColors {
   primary: string;
@@ -66,148 +57,143 @@ interface ExtendedArtist {
 
 export default function DynamicSearch({
   userRole,
-  artists: propArtists,
+  trendingData,
+  isLoading,
+  error,
+  activeTab,
+  onTabChange,
 }: {
   userRole?: string;
-  artists?: ExtendedArtist[];
+  trendingData?: GetTrendingContentResponse;
+  isLoading?: boolean;
+  error?: any;
+  activeTab: 'top' | 'songs' | 'artists';
+  onTabChange: (tab: 'top' | 'songs' | 'artists') => void;
 }) {
   console.log("enter here");
-  const { user } = useAuth();
-  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("Top");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  // Mock artists data to replace useArtists and API calls
-  const mockArtists: ExtendedArtist[] = [
-    {
-      id: 1,
-      name: "Bad Bunny",
-      genre: "Reggaeton",
-      country: "Puerto Rico",
-      monthlyListeners: 75000000,
-      streams: 15420000,
-      revenue: 82450,
-      imageUrl: "https://example.com/bad-bunny.jpg",
-      description: "Global reggaeton superstar from Puerto Rico",
-    },
-    {
-      id: 2,
-      name: "The Weeknd",
-      genre: "R&B",
-      country: "Canada",
-      monthlyListeners: 68000000,
-      streams: 22350000,
-      revenue: 125600,
-      imageUrl: "https://example.com/weeknd.jpg",
-      description: "Grammy-winning R&B artist from Toronto",
-    },
-    {
-      id: 3,
-      name: "Taylor Swift",
-      genre: "Pop",
-      country: "USA",
-      monthlyListeners: 85000000,
-      streams: 31800000,
-      revenue: 189400,
-      imageUrl: "https://example.com/taylor-swift.jpg",
-      description: "Multi-Grammy winning pop superstar",
-    },
-    {
-      id: 4,
-      name: "Drake",
-      genre: "Hip Hop",
-      country: "Canada",
-      monthlyListeners: 72000000,
-      streams: 28200000,
-      revenue: 158900,
-      imageUrl: "https://example.com/drake.jpg",
-      description: "Chart-topping rapper and singer from Toronto",
-    },
-    {
-      id: 5,
-      name: "Dua Lipa",
-      genre: "Pop",
-      country: "UK",
-      monthlyListeners: 62000000,
-      streams: 18500000,
-      revenue: 95300,
-      imageUrl: "https://example.com/dua-lipa.jpg",
-      description: "British pop sensation and Grammy winner",
-    },
-    {
-      id: 6,
-      name: "Ed Sheeran",
-      genre: "Pop",
-      country: "UK",
-      monthlyListeners: 58000000,
-      streams: 24100000,
-      revenue: 142800,
-      imageUrl: "https://example.com/ed-sheeran.jpg",
-      description: "Singer-songwriter from England",
-    },
-  ];
+  // Like/Dislike mutations
+  const [likeDislikeContent, { isLoading: isLikeDislikeContentLoading }] = useLikeDislikeContentMutation();
+  const [likeDislikeArtist, { isLoading: isLikeDislikeArtistLoading }] = useLikeDislikeArtistMutation();
+  const [followUnfollowArtist, { isLoading: isFollowUnfollowArtistLoading }] = useFollowUnfollowArtistMutation();
 
-  // Use prop artists or mock data (replacing useArtists hook)
-  const artists = propArtists || mockArtists;
+  // Debug: Log when trendingData changes
+  useEffect(() => {
+    if (trendingData?.data && 'artists' in trendingData.data) {
+      console.log("Trending artists data updated:", trendingData.data.artists);
+    }
+  }, [trendingData]);
 
-  // Additional mock API artists (replacing useQuery API call)
-  const apiArtists: ExtendedArtist[] = [
-    {
-      id: 7,
-      name: "Billie Eilish",
-      genre: "Alternative Pop",
-      country: "USA",
-      monthlyListeners: 55000000,
-      streams: 19800000,
-      revenue: 98500,
-      imageUrl: "https://example.com/billie-eilish.jpg",
-      description: "Grammy-winning alternative pop artist",
-    },
-    {
-      id: 8,
-      name: "Post Malone",
-      genre: "Hip Hop",
-      country: "USA",
-      monthlyListeners: 64000000,
-      streams: 25600000,
-      revenue: 135700,
-      imageUrl: "https://example.com/post-malone.jpg",
-      description: "Chart-topping hip hop and pop artist",
-    },
-  ];
+  // Handle like/dislike content
+  const handleLikeContent = async (contentId: string) => {
+    try {
+      await likeDislikeContent({ contentId }).unwrap();
+      console.log("Content like/dislike toggled successfully");
+    } catch (error) {
+      console.error("Error toggling content like:", error);
+    }
+  };
 
-  // Données trending statiques pour éviter l'erreur
-  const trendingNow = [
-    {
-      id: 1,
-      title: "Monaco",
-      artist: "Bad Bunny",
-      plays: "2.1M",
-      isLive: true,
-    },
-    {
-      id: 2,
-      title: "Blinding Lights",
-      artist: "The Weeknd",
-      plays: "1.8M",
-      isLive: false,
-    },
-    {
-      id: 3,
-      title: "Anti-Hero",
-      artist: "Taylor Swift",
-      plays: "3.2M",
-      isLive: false,
-    },
-    {
-      id: 4,
-      title: "God's Plan",
-      artist: "Drake",
-      plays: "2.7M",
-      isLive: false,
-    },
-  ];
+  // Handle like/dislike artist
+  const handleLikeArtist = async (artistId: string) => {
+    try {
+      await likeDislikeArtist({ artistId }).unwrap();
+      console.log("Artist like/dislike toggled successfully");
+    } catch (error) {
+      console.error("Error toggling artist like:", error);
+    }
+  };
+
+  // Handle follow/unfollow artist
+  const handleFollowArtist = async (artistId: string) => {
+    try {
+      const result = await followUnfollowArtist({ artistId }).unwrap();
+      console.log("Artist follow/unfollow toggled successfully:", result);
+      console.log("Current artist data before update:", trendingData?.data);
+    } catch (error) {
+      console.error("Error toggling artist follow:", error);
+    }
+  };
+
+  // Handle tab change
+  const handleTabChange = (tab: string) => {
+    if (tab === "Top") onTabChange("top");
+    else if (tab === "Songs") onTabChange("songs");
+    else if (tab === "Artists") onTabChange("artists");
+  };
+
+  // Generate dummy profile image URL
+  const getDummyProfileImage = (username: string) => {
+    const colors = ['purple', 'blue', 'green', 'red', 'yellow', 'pink', 'indigo', 'orange'];
+    const color = colors[username.length % colors.length];
+    return `https://ui-avatars.com/api/?name=${username}&background=${color}&color=fff&size=128&rounded=true`;
+  };
+
+  // Render content based on type
+  const renderContent = (item: ContentItem) => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const fileUrl = `${baseUrl}/${item.file}`;
+
+
+    if (item.type === 'image') {
+      return (
+        <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#17153f00' }}>
+          <img
+            src={fileUrl}
+            alt={item.title}
+            className="max-w-full max-h-full object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        </div>
+      );
+    } else if (item.type === 'video') {
+      return (
+        <video
+          className="w-full h-full object-cover"
+          controls
+          preload="metadata"
+          onError={(e) => {
+            console.error('Video load error:', e);
+          }}
+        >
+          <source src={fileUrl} type="video/mp4" />
+        </video>
+      );
+    } else if (item.type === 'audio') {
+      return (
+        <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex flex-col items-center justify-center relative">
+          <div className="absolute top-4 left-4 flex items-center space-x-2 pointer-events-none">
+            <Volume2 className="w-6 h-6 text-white/80" />
+            <p className="text-sm font-medium text-white/80">{item.title}</p>
+          </div>
+          <audio
+            className="w-4/5 h-12 z-10"
+            controls
+            preload="metadata"
+            onError={(e) => {
+              console.error('Audio load error:', e);
+            }}
+          >
+            <source src={fileUrl} type="audio/mpeg" />
+            <source src={fileUrl} type="audio/wav" />
+            <source src={fileUrl} type="audio/ogg" />
+            Your browser does not support the audio element.
+          </audio>
+        </div>
+      );
+    }
+    return null;
+  };
+
+
+  // Use prop artists or empty array
+  const artists: ExtendedArtist[] = [];
+
+
 
   // Thème d'origine avec couleurs dynamiques
   const themeColors: ThemeColors = useMemo(() => {
@@ -242,17 +228,12 @@ export default function DynamicSearch({
     );
   }, [themeColors]);
 
-  // Mock refresh function (replacing refetchArtists)
-  const handleRefreshArtists = () => {
-    console.log("Refreshing artists (mock)");
-    // In a real app, this would trigger a re-fetch
-  };
 
   // Générer des résultats de recherche avec données statiques - TOUS les artistes recherchables
   const generateSearchResults = (query: string): SearchResult[] => {
     if (!query.trim()) return [];
     // Combiner toutes les sources d'artistes pour une recherche exhaustive (using mock data)
-    const allArtists = [...(artists || []), ...(apiArtists || [])];
+    const allArtists = [...(artists || [])];
     const results: SearchResult[] = [];
 
     allArtists
@@ -264,7 +245,7 @@ export default function DynamicSearch({
             artist.country.toLowerCase().includes(query.toLowerCase()))
       )
       .slice(0, 10) // Limite à 10 vrais artistes maximum
-      .forEach((artist, index) => {
+      .forEach((artist) => {
         results.push({
           id: `real-artist-${artist.id}-${Math.random()}`,
           type: "artist",
@@ -292,28 +273,13 @@ export default function DynamicSearch({
 
   // Filtrer les résultats selon l'onglet actif et le rôle utilisateur
   const filteredResults = useMemo(() => {
-    if (activeTab === "Top") return searchResults;
+    if (activeTab === "top") return searchResults;
     return searchResults.filter((result) => {
       switch (activeTab) {
-        case "Artists":
+        case "artists":
           return result.type === "artist";
-        case "Songs":
+        case "songs":
           return result.type === "song";
-        case "Videos":
-          return result.type === "video";
-        case "Playlists":
-          return result.type === "playlist";
-        case "LIVE":
-          return result.type === "video" && Math.random() > 0.7;
-        case "Investment Ops":
-        case "Rising Stars":
-          return result.type === "artist" && userRole === "investor";
-        case "Talent Scout":
-        case "Market Data":
-          return result.type === "artist" && userRole === "label";
-        case "Collaborations":
-        case "Opportunities":
-          return result.type === "artist" && userRole === "artist";
         default:
           return true;
       }
@@ -323,16 +289,11 @@ export default function DynamicSearch({
   // SUPPRIMÉ: Plus de contenu fictif trending
 
   // Fonctions utilitaires
-  const getUserTypeLabel = () => (userRole || "User") + " Search";
   const getRoleAction = () => (userRole === "investor" ? "Invest" : "Follow");
 
   // Tabs basés sur le rôle utilisateur
   const getRoleTabs = () => {
-    const baseTabs = ["Top", "Artists", "Songs"];
-    if (userRole === "investor") return [...baseTabs, "Investment Ops"];
-    if (userRole === "label") return [...baseTabs, "Talent Scout"];
-    if (userRole === "artist") return [...baseTabs, "Collaborations"];
-    return baseTabs;
+    return ["Top", "Songs", "Artists"];
   };
 
   return (
@@ -381,18 +342,18 @@ export default function DynamicSearch({
             </Button>
           )}
         </div>
-        <Button
+        {/* <Button
           variant="ghost"
           size="sm"
           className="hover:bg-white/10"
           style={{ color: themeColors.text }}
         >
           <MoreVertical className="w-5 h-5" />
-        </Button>
+        </Button> */}
       </div>
 
       {/* User type badge */}
-      <div className="relative z-10 px-4 mb-4">
+      {/* <div className="relative z-10 px-4 mb-4">
         <Badge
           className="text-xs px-3 py-1"
           style={{
@@ -403,34 +364,44 @@ export default function DynamicSearch({
         >
           {getUserTypeLabel()}
         </Badge>
-      </div>
+      </div> */}
 
-      {/* Navigation tabs */}
-      <div className="relative z-10 px-4 mb-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      {/* Navigation tabs - Centered */}
+      <div className="relative z-10 px-4 mb-8 flex justify-center">
+        <div className="bg-gray-900/30 backdrop-blur-sm rounded-2xl p-2 border border-gray-700/50">
+          <Tabs value={activeTab === 'top' ? 'Top' : activeTab === 'songs' ? 'Songs' : 'Artists'} onValueChange={handleTabChange} className="w-auto">
           <TabsList
-            className="grid w-full h-12 p-1 rounded-full grid-cols-3 md:grid-cols-4"
+              className="grid h-12 p-1 rounded-full grid-cols-3 w-auto min-w-[320px] relative overflow-hidden"
             style={{ backgroundColor: themeColors.backgroundSecondary }}
           >
-            {getRoleTabs().map((tab) => (
+            {getRoleTabs().map((tab) => {
+              const isActive = (activeTab === 'top' && tab === 'Top') || 
+                              (activeTab === 'songs' && tab === 'Songs') || 
+                              (activeTab === 'artists' && tab === 'Artists');
+              
+              return (
               <TabsTrigger
                 key={tab}
                 value={tab}
-                className="rounded-full text-xs md:text-sm font-medium transition-all duration-300 data-[state=active]:text-white"
+                  className={`rounded-full text-sm font-semibold transition-all duration-300 px-6 py-2 ${
+                    isActive 
+                      ? 'text-white shadow-lg transform scale-105' 
+                      : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
+                  }`}
                 style={{
-                  color:
-                    activeTab === tab
-                      ? themeColors.text
-                      : themeColors.textSecondary,
-                  backgroundColor:
-                    activeTab === tab ? themeColors.primary : "transparent",
+                    backgroundColor: isActive ? themeColors.primary : "transparent",
+                    color: isActive ? themeColors.text : themeColors.textSecondary,
+                    boxShadow: isActive ? `0 4px 20px ${themeColors.primary}50` : 'none',
+                    border: isActive ? `2px solid ${themeColors.primary}` : '2px solid transparent',
                 }}
               >
                 {tab}
               </TabsTrigger>
-            ))}
+              );
+            })}
           </TabsList>
         </Tabs>
+        </div>
       </div>
 
       {/* Add to music app suggestion */}
@@ -465,9 +436,71 @@ export default function DynamicSearch({
 
       {/* Main content */}
       <div className="relative z-10 px-4 pb-20">
-        {activeTab === "Artists" ? (
-          // Onglet Artists - Afficher seulement les vrais profils d'artistes
-          <ArtistsGrid />
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-400">Loading trending content...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-400 mb-4">Failed to load trending content</p>
+            <p className="text-gray-500 text-sm">Please try again later</p>
+          </div>
+        ) : activeTab === "artists" ? (
+          // Artists tab - Show artists from API
+          <div className="space-y-6">
+            <div className="flex items-center space-x-2">
+              <Users className="w-5 h-5" style={{ color: themeColors.accent }} />
+              <h3 className="text-lg font-bold" style={{ color: themeColors.text }}>
+                Trending Artists
+              </h3>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {trendingData?.data && 'artists' in trendingData.data ? 
+                trendingData.data.artists.map((artist: Artist) => {
+                  console.log("Rendering artist:", artist.username, "isFollowed:", artist.isFollowed);
+                  return (
+                  <div key={artist._id} className="bg-gray-900 rounded-lg p-4 space-y-3">
+                    <div className="aspect-square bg-gray-800 rounded-lg flex items-center justify-center">
+                      <span className="text-2xl font-bold text-gray-400">
+                        {artist.username.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white text-sm">{artist.username}</h4>
+                      <p className="text-gray-400 text-xs">{artist.favoriteGenre}</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className={`flex-1 text-xs ${
+                          artist.isLiked ? 'text-red-500 border-red-500' : 'text-gray-400'
+                        }`}
+                        onClick={() => handleLikeArtist(artist._id)}
+                        disabled={isLikeDislikeArtistLoading}
+                      >
+                        <Heart className={`w-3 h-3 mr-1 ${artist.isLiked ? 'fill-current' : ''}`} />
+                        Like
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className={`flex-1 text-xs ${
+                          artist.isFollowed ? 'text-green-500 border-green-500' : 'text-gray-400'
+                        }`}
+                        onClick={() => handleFollowArtist(artist._id)}
+                        disabled={isFollowUnfollowArtistLoading}
+                      >
+                        {artist.isFollowed ? 'Following' : 'Follow'}
+                      </Button>
+                    </div>
+                  </div>
+                  );
+                }) : null
+              }
+            </div>
+          </div>
         ) : !searchQuery ? (
           // Trending content when no search
           <div className="space-y-6">
@@ -481,43 +514,82 @@ export default function DynamicSearch({
                   className="text-lg font-bold"
                   style={{ color: themeColors.text }}
                 >
-                  Trending Now
+                  {activeTab === 'top' ? 'Trending Now' : activeTab === 'songs' ? 'Trending Songs' : 'Trending Artists'}
                 </h3>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {trendingNow.map((item) => (
-                  <div
-                    key={item.id}
-                    className="relative aspect-video rounded-lg overflow-hidden cursor-pointer group transition-all duration-300 hover:scale-105"
-                    style={{ background: themeColors.gradient }}
-                  >
-                    {item.isLive && (
-                      <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-white rounded-full animate-ping" />
-                        <span>LIVE</span>
-                      </div>
-                    )}
-                    <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-                      {item.plays}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl">
+                {trendingData?.data && Array.isArray(trendingData.data) ? 
+                  trendingData.data.map((item: ContentItem) => (
+                    <div
+                      key={item._id}
+                      className="rounded-lg shadow-lg overflow-hidden max-w-xl bg-gray-900/50 backdrop-blur-sm border border-gray-700/30"
+                    >
+                      {/* Instagram-style layout for all content types */}
+                      <>
+                        {/* User header */}
+                        <div className="flex items-center p-3 border-b" style={{ borderColor: themeColors.primary + '20' }}>
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="w-8 h-8">
+                              <img 
+                                src={getDummyProfileImage(item.user.username)} 
+                                alt={item.user.username}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                              <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm font-semibold">
+                                {item.user.username.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold text-sm" style={{ color: themeColors.text }}>{item.user.username}</p>
+                              <p className="text-xs" style={{ color: themeColors.textSecondary }}>{item.user.favoriteGenre} • {item.user.country || 'Unknown City'}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="relative aspect-video overflow-hidden">
+                          {renderContent(item)}
+                        </div>
+                        
+                        {/* Actions */}
+                        <div className="p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={`p-1 ${
+                                  item.isLiked ? 'text-red-500' : ''
+                                }`}
+                                style={{ color: item.isLiked ? '#ef4444' : themeColors.textSecondary }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLikeContent(item._id);
+                                }}
+                                disabled={isLikeDislikeContentLoading}
+                              >
+                                <Heart className={`w-6 h-6 ${item.isLiked ? 'fill-current' : ''}`} />
+                              </Button>
+                            </div>
+                            <div className="text-sm" style={{ color: themeColors.textSecondary }}>
+                              {item.likeCount || 0} likes
+                            </div>
+                          </div>
+                          
+                          {/* Content details */}
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold" style={{ color: themeColors.text }}>{item.title}</p>
+                            <p className="text-sm" style={{ color: themeColors.textSecondary }}>{item.description}</p>
+                            <p className="text-xs" style={{ color: themeColors.textSecondary }}>{item.genre}</p>
+                          </div>
+                        </div>
+                      </>
                     </div>
-                    <div className="absolute inset-0 p-3 flex flex-col justify-end">
-                      <div className="space-y-1">
-                        <h4 className="text-white font-bold text-sm">
-                          {item.title}
-                        </h4>
-                        <p className="text-white/80 text-xs">{item.artist}</p>
-                      </div>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                        <Play
-                          className="w-6 h-6 text-white ml-1"
-                          fill="white"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  )) : null
+                }
               </div>
             </div>
           </div>

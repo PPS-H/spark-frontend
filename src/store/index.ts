@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { authApi } from './features/api/authApi';
 import { socialMediaApi } from './features/api/socialMediaApi';
 import { fanApi } from './features/api/fanApi';
+import { searchApi } from './features/api/searchApi';
 import { setupListeners } from '@reduxjs/toolkit/query';
 
 export const store = configureStore({
@@ -9,9 +10,10 @@ export const store = configureStore({
     [authApi.reducerPath]: authApi.reducer,
     [socialMediaApi.reducerPath]: socialMediaApi.reducer,
     [fanApi.reducerPath]: fanApi.reducer,
+    [searchApi.reducerPath]: searchApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(authApi.middleware, socialMediaApi.middleware, fanApi.middleware),
+    getDefaultMiddleware().concat(authApi.middleware, socialMediaApi.middleware, fanApi.middleware, searchApi.middleware),
 });
 
 setupListeners(store.dispatch);

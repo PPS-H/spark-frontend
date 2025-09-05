@@ -45,6 +45,15 @@ export interface LikeDislikeArtistResponse {
   message: string;
 }
 
+export interface FollowUnfollowArtistRequest {
+  artistId: string;
+}
+
+export interface FollowUnfollowArtistResponse {
+  success: boolean;
+  message: string;
+}
+
 // Get base URL from environment variable
 const getBaseUrl = () => {
   return import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -64,7 +73,7 @@ export const fanApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['FeaturedArtists'],
+  tagTypes: ['FeaturedArtists', 'TrendingContent'],
   endpoints: (builder) => ({
     getFeaturedArtists: builder.query<GetFeaturedArtistsResponse, GetFeaturedArtistsRequest>({
       query: ({ page = 1, limit = 10 }) => ({
@@ -80,10 +89,23 @@ export const fanApi = createApi({
       }),
       invalidatesTags: ['FeaturedArtists'],
     }),
+    followUnfollowArtist: builder.mutation<FollowUnfollowArtistResponse, FollowUnfollowArtistRequest>({
+      query: ({ artistId }) => ({
+        url: `/api/v1/artist/followUnfollowArtist/${artistId}`,
+        method: 'PUT',
+      }),
+      invalidatesTags: [
+        'FeaturedArtists',
+        { type: 'TrendingContent', id: 'artists' },
+        { type: 'TrendingContent', id: 'top' },
+        { type: 'TrendingContent', id: 'songs' },
+      ],
+    }),
   }),
 });
 
 export const {
   useGetFeaturedArtistsQuery,
   useLikeDislikeArtistMutation,
+  useFollowUnfollowArtistMutation,
 } = fanApi;

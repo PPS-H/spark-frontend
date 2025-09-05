@@ -656,7 +656,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="text-white flex items-center">
               <Shield className="w-5 h-5 mr-2 text-cyan-400" />
-              {t("accountActions")}
+              {t("Account Actions")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -665,7 +665,7 @@ export default function SettingsPage() {
               className="w-full border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/10"
               onClick={() => setIsChangePasswordOpen(true)}
             >
-              {t("changePassword")}
+              {t("Change Password")}
             </Button>
 
             {/* <Button

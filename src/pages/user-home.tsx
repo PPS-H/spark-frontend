@@ -127,13 +127,13 @@ export default function UserHome() {
         </div>
 
         <div className="flex items-center space-x-3">
-          <Button
+          {/* <Button
             size="sm"
             variant="outline"
             className="border-gray-700 hover:bg-gray-800"
           >
             <Moon className="w-4 h-4" />
-          </Button>
+          </Button> */}
           <Button
             size="sm"
             className="bg-cyan-500 hover:bg-cyan-600 text-black font-medium px-4"
@@ -142,13 +142,13 @@ export default function UserHome() {
           >
             {isLogoutLoading ? "..." : "Logout"}
           </Button>
-          <Button
+          {/* <Button
             size="sm"
             variant="outline"
             className="border-gray-700 hover:bg-gray-800"
           >
             <Menu className="w-4 h-4" />
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -167,14 +167,14 @@ export default function UserHome() {
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Trending
                 </Button>
-                <Button
+                {/* <Button
                   size="sm"
                   variant="outline"
                   className="border-gray-700 text-gray-300 hover:bg-gray-800"
                   onClick={() => setActiveTab("new")}
                 >
                   New
-                </Button>
+                </Button> */}
               </div>
             </div>
 
