@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuthRTK";
 import ArtistDashboard from "@/components/artist-dashboard";
 import ProfessionalInbox from "@/components/professional-inbox";
 import ArtistProfilePage from "@/components/artist-profile-page";
-
+import CreateNewCampaign from "@/components/create-new-campaign";
 export default function ArtistHome() {
   const { user, logout, isLogoutLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
@@ -368,77 +368,7 @@ export default function ArtistHome() {
 
       {/* New Campaign Modal */}
       {showNewCampaignModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white">Create New Campaign</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowNewCampaignModal(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Campaign Title</label>
-                <Input 
-                  type="text"
-                  value={campaignTitle}
-                  onChange={(e) => setCampaignTitle(e.target.value)}
-                  placeholder="Enter campaign title"
-                  className="w-full bg-slate-700 text-white border-gray-600"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Funding Goal (€)</label>
-                <Input 
-                  type="number"
-                  value={fundingGoal}
-                  onChange={(e) => setFundingGoal(e.target.value)}
-                  placeholder="50000"
-                  className="w-full bg-slate-700 text-white border-gray-600"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Campaign Description</label>
-                <Textarea 
-                  value={campaignDescription}
-                  onChange={(e) => setCampaignDescription(e.target.value)}
-                  placeholder="Describe your campaign"
-                  rows={4}
-                  className="w-full bg-slate-700 text-white border-gray-600"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Campaign Duration</label>
-                <select
-                  value={campaignDuration}
-                  onChange={(e) => setCampaignDuration(e.target.value)}
-                  className="w-full bg-slate-700 text-white border-gray-600 border rounded px-3 py-2"
-                >
-                  <option value="">Select duration</option>
-                  <option value="30">30 days</option>
-                  <option value="45">45 days</option>
-                  <option value="60">60 days</option>
-                  <option value="90">90 days</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex space-x-3 mt-6">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowNewCampaignModal(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateCampaign}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-              >
-                Create Campaign
-              </Button>
-            </div>
-          </div>
-        </div>
+          <CreateNewCampaign onClose={() => setShowNewCampaignModal(false)} />
       )}
 
       {/* Artist Profile Page - Full Screen */}

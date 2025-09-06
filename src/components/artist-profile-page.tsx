@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ContentUploadModal } from "./content-upload-modal";
 import { useGetContentQuery } from "@/store/features/api/authApi";
 import type { Artist } from "@/types/artist";
+import CreateNewCampaign from "./create-new-campaign";
 
 interface ArtistProfilePageProps {
   artist: Artist;
@@ -40,6 +41,7 @@ export default function ArtistProfilePage({
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showAddContent, setShowAddContent] = useState(false);
   const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [showCreateCampaign, setShowCreateCampaign] = useState(false);
   const [showFundingSettings, setShowFundingSettings] = useState(false);
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState("");
@@ -200,6 +202,13 @@ export default function ArtistProfilePage({
 
   const handleInputChange = (field: string, value: string) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCampaignCreated = (campaign: any) => {
+    console.log('Campaign created from profile page:', campaign);
+    // Here you could add the campaign to the campaigns list or trigger a refetch
+    // For now, just show success message
+    alert("Campaign created successfully!");
   };
 
 
@@ -691,7 +700,7 @@ export default function ArtistProfilePage({
                     </Button>
                     {isOwner && (
                       <Button
-                        onClick={() => setShowCreateEvent(true)}
+                        onClick={() => setShowCreateCampaign(true)}
                         className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"
                       >
                         <Plus className="w-4 h-4 mr-2" />
@@ -1083,6 +1092,14 @@ export default function ArtistProfilePage({
               </div>
             </div>
           </div>
+        )}
+
+        {/* Create Campaign Modal */}
+        {showCreateCampaign && (
+          <CreateNewCampaign 
+            onClose={() => setShowCreateCampaign(false)}
+            onCampaignCreated={handleCampaignCreated}
+          />
         )}
 
         {/* Content Upload Modal */}

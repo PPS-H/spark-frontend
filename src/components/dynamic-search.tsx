@@ -690,8 +690,8 @@ export default function DynamicSearch({
                               <p className="text-xs" style={{ color: themeColors.textSecondary }}>
                                 {item.user.favoriteGenre} • {item.user.country || 'Unknown City'}
                               </p>
-                            </div>
-                          </div>
+                      </div>
+                    </div>
                         </div>
 
                         {/* Content area */}
@@ -724,8 +724,8 @@ export default function DynamicSearch({
                         {/* Details */}
                         <div className="p-3">
                           <h4 className="font-semibold mb-1" style={{ color: themeColors.text }}>
-                            {item.title}
-                          </h4>
+                          {item.title}
+                        </h4>
                           <p className="text-sm mb-2" style={{ color: themeColors.textSecondary }}>
                             {item.description}
                           </p>
@@ -741,7 +741,7 @@ export default function DynamicSearch({
                               #{item.genre}
                             </Badge>
                           )}
-                        </div>
+                      </div>
                       </>
                     </div>
                   )) : (
@@ -776,7 +776,7 @@ export default function DynamicSearch({
                 >
                   {activeTab === 'top' ? 'Trending Now' : activeTab === 'songs' ? 'Trending Songs' : 'Trending Artists'}
                 </h3>
-              </div>
+                      </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl">
                 {trendingData?.data && Array.isArray(trendingData.data) ? 
                   trendingData.data.map((item: ContentItem) => (
@@ -805,9 +805,9 @@ export default function DynamicSearch({
                             <div>
                               <p className="font-semibold text-sm" style={{ color: themeColors.text }}>{item.user.username}</p>
                               <p className="text-xs" style={{ color: themeColors.textSecondary }}>{item.user.favoriteGenre} • {item.user.country || 'Unknown City'}</p>
-                            </div>
-                          </div>
-                        </div>
+                    </div>
+                  </div>
+              </div>
                         
                         {/* Content */}
                         <div className="relative aspect-video overflow-hidden">
