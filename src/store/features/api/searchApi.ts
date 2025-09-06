@@ -88,6 +88,27 @@ export interface FollowUnfollowArtistResponse {
   message: string;
 }
 
+export interface SearchHistoryItem {
+  _id: string;
+  userId: string;
+  searchTerm: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+export interface GetUserContentSearchHistoryRequest {
+  search: string;
+}
+
+export interface GetUserContentSearchHistoryResponse {
+  success: boolean;
+  message: string;
+  data: {
+    history: SearchHistoryItem[];
+  };
+}
+
 // Get base URL from environment variable
 const getBaseUrl = () => {
   return import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -107,7 +128,7 @@ export const searchApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['TrendingContent', 'Artists', 'Songs'],
+  tagTypes: ['TrendingContent', 'Artists', 'Songs', 'SearchHistory'],
   endpoints: (builder) => ({
     getTrendingContent: builder.query<GetTrendingContentResponse, GetTrendingContentRequest>({
       query: ({ page = 1, limit = 10, type, search = '' }) => ({
@@ -146,6 +167,13 @@ export const searchApi = createApi({
         { type: 'TrendingContent', id: 'songs' },
       ],
     }),
+    getUserContentSearchHistory: builder.query<GetUserContentSearchHistoryResponse, GetUserContentSearchHistoryRequest>({
+      query: ({ search }) => ({
+        url: '/api/v1/content/getUserContentSearchHisory',
+        params: { search },
+      }),
+      providesTags: ['SearchHistory'],
+    }),
   }),
 });
 
@@ -154,4 +182,5 @@ export const {
   useLikeDislikeContentMutation,
   useLikeDislikeArtistMutation,
   useFollowUnfollowArtistMutation,
+  useGetUserContentSearchHistoryQuery,
 } = searchApi;

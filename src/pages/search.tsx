@@ -5,8 +5,11 @@ import { useGetTrendingContentQuery } from "@/store/features/api/searchApi";
 
 export default function Search() {
   const [activeTab, setActiveTab] = useState<'top' | 'songs' | 'artists'>('top');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInputValue, setSearchInputValue] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
 
-  // Fetch trending content based on active tab
+  // Fetch trending content based on active tab and search query
   const { 
     data: trendingData, 
     isLoading, 
@@ -14,8 +17,36 @@ export default function Search() {
   } = useGetTrendingContentQuery({ 
     page: 1, 
     limit: 10, 
-    type: activeTab 
+    type: activeTab,
+    search: hasSearched ? searchQuery : '' // Only use search query if user has actually searched
   });
+
+  // Handle search input change (for display only)
+  const handleSearchInputChange = (query: string) => {
+    setSearchInputValue(query);
+    // If user clears the input, reset search state
+    if (query === '') {
+      setSearchQuery('');
+      setHasSearched(false);
+    }
+  };
+
+  // Handle search (when Enter is pressed)
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query === '') {
+      setHasSearched(false);
+    } else {
+      setHasSearched(true);
+    }
+    // The trending content will automatically refetch with the new search query
+  };
+
+  // Handle tab change with search query
+  const handleTabChange = (tab: 'top' | 'songs' | 'artists') => {
+    setActiveTab(tab);
+    // If there's a search query, it will automatically be used in the API call
+  };
 
   // Mock real-time data states (keeping original UI elements)
   const updateCount = 1;
@@ -58,7 +89,12 @@ export default function Search() {
         isLoading={isLoading}
         error={error}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
+        onSearch={handleSearch}
+        onSearchInputChange={handleSearchInputChange}
+        searchInputValue={searchInputValue}
+        hasSearched={hasSearched}
+        searchQuery={searchQuery}
       />
     </div>
   );

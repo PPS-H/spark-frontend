@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useLikeDislikeContentMutation, useLikeDislikeArtistMutation, useFollowUnfollowArtistMutation } from "@/store/features/api/searchApi";
+import { useLikeDislikeContentMutation, useLikeDislikeArtistMutation, useFollowUnfollowArtistMutation, useGetUserContentSearchHistoryQuery } from "@/store/features/api/searchApi";
 import type { GetTrendingContentResponse, ContentItem, Artist } from "@/store/features/api/searchApi";
 
 interface ThemeColors {
@@ -62,6 +62,11 @@ export default function DynamicSearch({
   error,
   activeTab,
   onTabChange,
+  onSearch,
+  onSearchInputChange,
+  searchInputValue,
+  hasSearched,
+  searchQuery: parentSearchQuery,
 }: {
   userRole?: string;
   trendingData?: GetTrendingContentResponse;
@@ -69,15 +74,38 @@ export default function DynamicSearch({
   error?: any;
   activeTab: 'top' | 'songs' | 'artists';
   onTabChange: (tab: 'top' | 'songs' | 'artists') => void;
+  onSearch?: (query: string) => void;
+  onSearchInputChange?: (query: string) => void;
+  searchInputValue?: string;
+  hasSearched?: boolean;
+  searchQuery?: string;
 }) {
   console.log("enter here");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showSearchHistory, setShowSearchHistory] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   // Like/Dislike mutations
   const [likeDislikeContent, { isLoading: isLikeDislikeContentLoading }] = useLikeDislikeContentMutation();
   const [likeDislikeArtist, { isLoading: isLikeDislikeArtistLoading }] = useLikeDislikeArtistMutation();
   const [followUnfollowArtist, { isLoading: isFollowUnfollowArtistLoading }] = useFollowUnfollowArtistMutation();
+
+  // Search history query with debouncing
+  const currentSearchValue = searchInputValue || searchQuery;
+  const { data: searchHistoryData } = useGetUserContentSearchHistoryQuery(
+    { search: debouncedSearchQuery },
+    { skip: !debouncedSearchQuery || debouncedSearchQuery.length < 2 } // Only search when query is at least 2 characters
+  );
+
+  // Debouncing effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(currentSearchValue);
+    }, 300); // 300ms debounce delay
+
+    return () => clearTimeout(timer);
+  }, [currentSearchValue]);
 
   // Debug: Log when trendingData changes
   useEffect(() => {
@@ -114,6 +142,64 @@ export default function DynamicSearch({
       console.log("Current artist data before update:", trendingData?.data);
     } catch (error) {
       console.error("Error toggling artist follow:", error);
+    }
+  };
+
+  // Handle search input change
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    setShowSearchHistory(value.length >= 2);
+    // Notify parent component about input change
+    if (onSearchInputChange) {
+      onSearchInputChange(value);
+    }
+  };
+
+  // Handle search history item click
+  const handleSearchHistoryClick = (searchTerm: string) => {
+    console.log("Search history clicked:", searchTerm);
+    setSearchQuery(searchTerm);
+    setShowSearchHistory(false);
+    // Notify parent component about input change
+    if (onSearchInputChange) {
+      onSearchInputChange(searchTerm);
+    }
+    // Focus back to input after setting the value
+    setTimeout(() => {
+      const input = document.querySelector('input[placeholder="Search artists, songs, videos..."]') as HTMLInputElement;
+      if (input) {
+        input.focus();
+      }
+    }, 100);
+  };
+
+  // Handle search input focus
+  const handleSearchFocus = () => {
+    setIsSearchFocused(true);
+    const currentValue = searchInputValue || searchQuery;
+    if (currentValue.length >= 2) {
+      setShowSearchHistory(true);
+    }
+  };
+
+  // Handle search input blur
+  const handleSearchBlur = () => {
+    setIsSearchFocused(false);
+    // Delay hiding search history to allow clicks on history items
+    setTimeout(() => setShowSearchHistory(false), 300);
+  };
+
+  // Handle search input key press (Enter key)
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      setShowSearchHistory(false);
+      // Call the parent's search handler to trigger API call
+      if (onSearch) {
+        onSearch(currentSearchValue);
+      }
+      console.log("Search triggered with query:", currentSearchValue);
     }
   };
 
@@ -309,7 +395,7 @@ export default function DynamicSearch({
       {/* Plus de bannière temps réel */}
 
       {/* Header with search */}
-      <div className="relative z-10 p-4 flex items-center space-x-4">
+      <div className="relative z-0 p-4 flex items-center space-x-4">
         <Button
           variant="ghost"
           size="sm"
@@ -321,21 +407,31 @@ export default function DynamicSearch({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
             placeholder="Search artists, songs, videos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setIsSearchFocused(false)}
+            value={searchInputValue || searchQuery}
+            onChange={handleSearchInputChange}
+            onFocus={handleSearchFocus}
+            onBlur={handleSearchBlur}
+            onKeyPress={handleSearchKeyPress}
             className={`pl-12 pr-12 h-12 text-lg rounded-full border-2 transition-all duration-300 bg-slate-900/50 ${
               isSearchFocused ? "border-cyan-500" : "border-transparent"
             } text-white ${
               isSearchFocused ? "shadow-lg shadow-cyan-500/20" : ""
             }`}
           />
-          {searchQuery && (
+          {(searchInputValue || searchQuery) && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setSearchQuery("")}
+              onClick={() => {
+                setSearchQuery("");
+                if (onSearchInputChange) {
+                  onSearchInputChange("");
+                }
+                // Also clear the search state in parent
+                if (onSearch) {
+                  onSearch("");
+                }
+              }}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:bg-cyan-500/20 text-white"
             >
               ✕
@@ -352,6 +448,42 @@ export default function DynamicSearch({
         </Button> */}
       </div>
 
+      {/* Search History Dropdown - Positioned absolutely to appear above tabs */}
+      {showSearchHistory && searchHistoryData?.data?.history && searchHistoryData.data.history.length > 0 && (
+        <div className="absolute top-20 left-20 right-4 z-[9999] bg-slate-900/95 backdrop-blur-sm rounded-lg border border-cyan-500/20 shadow-2xl max-h-80 overflow-y-auto">
+          <div className="p-2">
+            <div className="text-xs text-cyan-400 mb-2 px-2 font-medium">Recent searches</div>
+            {searchHistoryData.data.history.map((item) => (
+              <button
+                key={item._id}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSearchHistoryClick(item.searchTerm);
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                className="w-full text-left px-3 py-3 hover:bg-cyan-500/10 rounded-md transition-all duration-200 flex items-center space-x-3 group cursor-pointer"
+              >
+                <div className="flex-shrink-0">
+                  <Search className="w-4 h-4 text-cyan-400 group-hover:text-cyan-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-white text-sm font-medium group-hover:text-cyan-100">
+                    {item.searchTerm}
+                  </span>
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="w-2 h-2 rounded-full bg-cyan-500/30 group-hover:bg-cyan-400/50"></div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* User type badge */}
       {/* <div className="relative z-10 px-4 mb-4">
         <Badge
@@ -366,9 +498,9 @@ export default function DynamicSearch({
         </Badge>
       </div> */}
 
-      {/* Navigation tabs - Centered */}
-      <div className="relative z-10 px-4 mb-8 flex justify-center">
-        <div className="bg-gray-900/30 backdrop-blur-sm rounded-2xl p-2 border border-gray-700/50">
+        {/* Navigation tabs - Centered */}
+        <div className="relative z-0 px-4 mb-8 flex justify-center">
+          <div className="bg-gray-900/30 backdrop-blur-sm rounded-2xl p-2 border border-gray-700/50">
           <Tabs value={activeTab === 'top' ? 'Top' : activeTab === 'songs' ? 'Songs' : 'Artists'} onValueChange={handleTabChange} className="w-auto">
           <TabsList
               className="grid h-12 p-1 rounded-full grid-cols-3 w-auto min-w-[320px] relative overflow-hidden"
@@ -405,7 +537,7 @@ export default function DynamicSearch({
       </div>
 
       {/* Add to music app suggestion */}
-      {searchQuery && (
+      {/* {searchQuery && (
         <div className="relative z-10 px-4 mb-4">
           <div
             className="flex items-center justify-between p-4 rounded-lg"
@@ -432,10 +564,10 @@ export default function DynamicSearch({
             </Button>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Main content */}
-      <div className="relative z-10 px-4 pb-20">
+      <div className="relative z-0 px-4 pb-20">
         {isLoading ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -452,11 +584,11 @@ export default function DynamicSearch({
             <div className="flex items-center space-x-2">
               <Users className="w-5 h-5" style={{ color: themeColors.accent }} />
               <h3 className="text-lg font-bold" style={{ color: themeColors.text }}>
-                Trending Artists
+                {hasSearched && parentSearchQuery ? `Search Results for "${parentSearchQuery}"` : 'Trending Artists'}
               </h3>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {trendingData?.data && 'artists' in trendingData.data ? 
+              {trendingData?.data && 'artists' in trendingData.data && trendingData.data.artists.length > 0 ? 
                 trendingData.data.artists.map((artist: Artist) => {
                   console.log("Rendering artist:", artist.username, "isFollowed:", artist.isFollowed);
                   return (
@@ -497,11 +629,139 @@ export default function DynamicSearch({
                     </div>
                   </div>
                   );
-                }) : null
+                }) : (
+                  <div className="col-span-full text-center py-20">
+                    <h3
+                      className="text-xl font-semibold mb-2"
+                      style={{ color: themeColors.text }}
+                    >
+                      No results found
+                    </h3>
+                    <p style={{ color: themeColors.textSecondary }}>
+                      Try searching for different keywords
+                    </p>
+                  </div>
+                )
               }
             </div>
           </div>
-        ) : !searchQuery ? (
+        ) : hasSearched && parentSearchQuery ? (
+          // Search results
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Search
+                  className="w-5 h-5"
+                  style={{ color: themeColors.accent }}
+                />
+                <h3
+                  className="text-lg font-bold"
+                  style={{ color: themeColors.text }}
+                >
+                  Search Results for "{parentSearchQuery}"
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl">
+                {trendingData?.data && Array.isArray(trendingData.data) && trendingData.data.length > 0 ? 
+                  trendingData.data.map((item: ContentItem) => (
+                    <div
+                      key={item._id}
+                      className="rounded-lg shadow-lg overflow-hidden max-w-xl bg-gray-900/50 backdrop-blur-sm border border-gray-700/30"
+                    >
+                      {/* Instagram-style layout for all content types */}
+                      <>
+                        {/* User header */}
+                        <div className="flex items-center p-3 border-b" style={{ borderColor: themeColors.primary + '20' }}>
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="w-8 h-8">
+                              <img 
+                                src={getDummyProfileImage(item.user.username)} 
+                                alt={item.user.username}
+                                className="w-full h-full object-cover"
+                              />
+                              <AvatarFallback className="text-xs">
+                                {item.user.username.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium" style={{ color: themeColors.text }}>
+                                {item.user.username}
+                              </p>
+                              <p className="text-xs" style={{ color: themeColors.textSecondary }}>
+                                {item.user.favoriteGenre} • {item.user.country || 'Unknown City'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Content area */}
+                        <div className="relative" style={{ backgroundColor: '#17153f00' }}>
+                          <div className="aspect-video flex items-center justify-center">
+                            {renderContent(item)}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="p-3 border-b" style={{ borderColor: themeColors.primary + '20' }}>
+                          <div className="flex items-center space-x-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`p-2 ${
+                                item.isLiked ? 'text-red-500' : 'text-gray-400'
+                              }`}
+                              onClick={() => handleLikeContent(item._id)}
+                              disabled={isLikeDislikeContentLoading}
+                            >
+                              <Heart className={`w-4 h-4 ${item.isLiked ? 'fill-current' : ''}`} />
+                            </Button>
+                            <span className="text-sm" style={{ color: themeColors.textSecondary }}>
+                              {item.likeCount || 0} likes
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div className="p-3">
+                          <h4 className="font-semibold mb-1" style={{ color: themeColors.text }}>
+                            {item.title}
+                          </h4>
+                          <p className="text-sm mb-2" style={{ color: themeColors.textSecondary }}>
+                            {item.description}
+                          </p>
+                          {item.genre && (
+                            <Badge
+                              className="text-xs rounded-full"
+                              style={{
+                                backgroundColor: `${themeColors.accent}40`,
+                                color: "white",
+                                border: `1px solid ${themeColors.accent}60`,
+                              }}
+                            >
+                              #{item.genre}
+                            </Badge>
+                          )}
+                        </div>
+                      </>
+                    </div>
+                  )) : (
+                    <div className="text-center py-20 col-span-full">
+                      <h3
+                        className="text-xl font-semibold mb-2"
+                        style={{ color: themeColors.text }}
+                      >
+                        No results found
+                      </h3>
+                      <p style={{ color: themeColors.textSecondary }}>
+                        Try searching for different keywords
+                      </p>
+                    </div>
+                  )
+                }
+              </div>
+            </div>
+          </div>
+        ) : !parentSearchQuery && !hasSearched ? (
           // Trending content when no search
           <div className="space-y-6">
             <div className="space-y-4">
@@ -576,11 +836,11 @@ export default function DynamicSearch({
                             </div>
                             <div className="text-sm" style={{ color: themeColors.textSecondary }}>
                               {item.likeCount || 0} likes
-                            </div>
-                          </div>
+                      </div>
+                    </div>
                           
                           {/* Content details */}
-                          <div className="space-y-1">
+                      <div className="space-y-1">
                             <p className="text-sm font-semibold" style={{ color: themeColors.text }}>{item.title}</p>
                             <p className="text-sm" style={{ color: themeColors.textSecondary }}>{item.description}</p>
                             <p className="text-xs" style={{ color: themeColors.textSecondary }}>{item.genre}</p>
